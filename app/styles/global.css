@@ -1,0 +1,23 @@
+/* GhostMode Global CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom layer styles for GhostMode UI components */
+@layer components {
+  .ghost-card {
+    @apply bg-ghost-card rounded-2xl p-4 border border-ghost-border;
+  }
+  
+  .ghost-button-primary {
+    @apply bg-ghost-teal py-3 px-4 rounded-xl text-ghost-bg-deep font-medium;
+  }
+  
+  .ghost-button-secondary {
+    @apply bg-transparent py-3 px-4 rounded-xl text-ghost-text border border-ghost-border font-medium;
+  }
+  
+  .ghost-input {
+    @apply bg-ghost-card rounded-xl p-3 text-ghost-text border border-ghost-border;
+  }
+}
