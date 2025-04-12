@@ -80,7 +80,7 @@
 - [ ] Caching for offline-read support
 
 ### Backend
-- [ ] Supabase Auth + Postgres + Channels
+- [ ] Firebase Auth + Firestore + Cloud Functions
 - [ ] Realtime pub/sub chat + memory sync
 - [ ] Edge functions for Ghost logic + AI relay
 - [ ] Basic content filters (toxicity, spam, etc.)
@@ -101,7 +101,7 @@
 
 ### Launch Readiness
 - [ ] Private beta group system (invite code flow)
-- [ ] Uptime SLA: 99.9% (Supabase + edge logs)
+- [ ] Uptime SLA: 99.9% (Firebase + Cloud Functions)
 - [ ] Sub-100ms baseline on core user actions
 - [ ] Published content rules (ghostmode.ethics.md)
 
@@ -114,7 +114,7 @@
 | **P0** | Ghost Personas | High | High | AI Model, Prompt System |
 | **P0** | Real-time Group Vibes | High | Medium | Realtime Channels, Animation |
 | **P0** | Micro-animation polish | High | Medium | Animation System |
-| **P1** | Authentication System | Medium | Low | Supabase Auth |
+| **P1** | Authentication System | Medium | Low | Firebase Auth |
 | **P1** | Threaded Replies | Medium | Medium | Message Architecture |
 | **P1** | Rich Media Preview | Medium | Medium | Media Processing |
 | **P1** | Emoji + Sticker Reactions | Medium | Low | Asset Library |

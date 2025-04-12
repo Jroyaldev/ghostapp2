@@ -66,7 +66,7 @@ const SignUpScreen = ({ navigation }) => {
             className="bg-ghost-teal p-4 rounded-xl items-center"
             onPress={() => {
               // For development, we'll navigate directly to Main
-              // In a real app, this would create an account with Supabase
+              // In a real app, this would create an account with Firebase
               navigation.navigate('Main');
             }}
           >

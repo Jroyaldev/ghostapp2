@@ -7,7 +7,7 @@
 - Establish NativeWind theming system
 - Create basic navigation flow
 - Implement authentication framework
-- Set up Supabase project and base tables
+- Set up Firebase project and base tables
 
 ### Phase 2: Core UI Components (Weeks 3-4)
 - Develop glassmorphic UI component library

@@ -31,11 +31,12 @@
 ## Backend Infrastructure
 
 ### Platform
-- **Supabase**: Comprehensive backend solution
+- **Firebase**: Comprehensive backend solution
   - User Authentication (OAuth: Apple, Google)
-  - PostgreSQL Database
-  - Realtime Channels for messaging
-  - Edge Functions for serverless operations
+  - Realtime Database
+  - Cloud Functions
+  - Firestore
+  - Authentication
 
 ### Realtime Features
 - Pub/sub chat architecture
@@ -46,7 +47,6 @@
 ### Security & Compliance
 - Transport layer security (TLS)
 - Basic content filters (toxicity, spam detection)
-- Uptime SLA: 99.9% (monitored via Supabase + edge logs)
 - GDPR-compliant data handling
 
 ## AI System Architecture
@@ -72,9 +72,9 @@
 ## Memory System
 
 ### Storage
-- **Supabase DB**: Primary storage for conversation history and saved items
-- Optional vector database integration for future semantic search (v2)
-  - Qdrant or Supabase Vector
+- **Firebase**: Primary storage for conversation history and saved items. 
+- **Firestore**: Optional vector database integration for future semantic search (v2)
+- **Cloud Functions**: Serverless operations
 
 ### Memory Features
 - Memory chip persistence and organization

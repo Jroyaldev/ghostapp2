@@ -53,7 +53,7 @@ const SignInScreen = ({ navigation }) => {
             className="bg-ghost-teal p-4 rounded-xl items-center"
             onPress={() => {
               // For development, we'll navigate directly to Main
-              // In a real app, this would authenticate with Supabase
+              // In a real app, this would authenticate with Firebase, then navigate to Main.
               navigation.navigate('Main');
             }}
           >
