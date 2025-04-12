@@ -14,14 +14,19 @@ import './app/styles/global.css';
 // Import the Navigation component
 import Navigation from './app/navigation';
 
+// Import Auth Provider
+import { AuthProvider } from './app/context/AuthContext';
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#121214" />
-        <View style={styles.container}>
-          <Navigation />
-        </View>
+        <AuthProvider>
+          <StatusBar barStyle="light-content" backgroundColor="#121214" />
+          <View style={styles.container}>
+            <Navigation />
+          </View>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

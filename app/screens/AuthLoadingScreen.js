@@ -1,27 +1,28 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme';
 
 const AuthLoadingScreen = ({ navigation }) => {
+  const { user, initializing } = useAuth();
+
   useEffect(() => {
-    // Simulating authentication check
-    // In a real app, this would check if the user is authenticated
-    const checkAuth = async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For now, always redirect to Auth flow
-      // Change this to 'Main' once authentication is implemented
-      navigation.replace('Auth');
-    };
-    
-    checkAuth();
-  }, []);
-  
+    // Check authentication state and navigate accordingly
+    if (!initializing) {
+      if (user) {
+        navigation.replace('Main');
+      } else {
+        navigation.replace('Auth');
+      }
+    }
+  }, [user, initializing, navigation]);
+
   return (
-    <View className="flex-1 justify-center items-center bg-ghost-bg">
-      <ActivityIndicator size="large" color={colors.vibe.helpful} />
-      <Text className="text-ghost-text-secondary mt-4">Loading GhostMode...</Text>
+    <View className="flex-1 bg-ghost-bg justify-center items-center">
+      <View className="bg-ghost-card/30 backdrop-blur-md rounded-2xl p-8 items-center border border-ghost-border">
+        <Text className="text-ghost-text text-2xl font-bold mb-4">GhostMode</Text>
+        <ActivityIndicator size="large" color="#3ECFB2" />
+      </View>
     </View>
   );
 };
