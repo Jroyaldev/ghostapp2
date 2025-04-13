@@ -3,15 +3,27 @@
  * This screen allows testing the Firebase integration
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { testFirebaseAuth, testFirestore } from '../utils/testFirebase';
 import { auth, signOutUser } from '../services/firebase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlaskConical } from 'lucide-react-native';
 
 const TestFirebaseScreen = ({ navigation }) => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    // Update user state when auth state changes
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
   // Add log message with timestamp
   const addLog = (message, isError = false) => {
@@ -84,8 +96,18 @@ const TestFirebaseScreen = ({ navigation }) => {
 
   return (
     <View className="flex-1 bg-ghost-bg">
-      <View className="p-6 border-b border-ghost-border bg-ghost-bg-deep">
-        <Text className="text-xl font-bold text-ghost-text">Firebase Test</Text>
+      <View 
+        style={{ paddingTop: insets.top + 10 }}
+        className="px-6 pb-4 border-b border-ghost-border bg-[#1A1A1E]"
+      >
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <View className="bg-[rgba(229,164,105,0.1)] p-1 rounded-full">
+              <FlaskConical size={20} color="#E5A469" strokeWidth={1.5} />
+            </View>
+            <Text className="text-xl font-semibold text-ghost-text ml-2">Firebase Test</Text>
+          </View>
+        </View>
       </View>
       
       <ScrollView className="flex-1 p-6">
@@ -94,7 +116,7 @@ const TestFirebaseScreen = ({ navigation }) => {
           <Text className="text-lg font-bold text-ghost-text mb-2">Authentication Status</Text>
           {user ? (
             <View>
-              <Text className="text-ghost-text">Signed in as: <Text className="text-ghost-teal">{user.email}</Text></Text>
+              <Text className="text-ghost-text">Signed in as: <Text className="text-[#3ECFB2]">{user.email}</Text></Text>
               <Text className="text-ghost-text">User ID: <Text className="text-ghost-text-secondary">{user.uid}</Text></Text>
             </View>
           ) : (
@@ -105,7 +127,7 @@ const TestFirebaseScreen = ({ navigation }) => {
         {/* Test Buttons */}
         <View className="flex-row mb-6 space-x-4">
           <TouchableOpacity 
-            className="flex-1 bg-ghost-teal p-4 rounded-xl items-center justify-center" 
+            className="flex-1 bg-[#3ECFB2] p-4 rounded-xl items-center justify-center" 
             onPress={handleTestAuth}
             disabled={loading}
           >
@@ -117,7 +139,7 @@ const TestFirebaseScreen = ({ navigation }) => {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className="flex-1 bg-ghost-violet p-4 rounded-xl items-center justify-center" 
+            className="flex-1 bg-[#9179FF] p-4 rounded-xl items-center justify-center" 
             onPress={handleTestFirestore}
             disabled={loading}
           >
@@ -131,7 +153,7 @@ const TestFirebaseScreen = ({ navigation }) => {
         
         {user && (
           <TouchableOpacity 
-            className="bg-ghost-coral/80 p-4 rounded-xl items-center mb-6" 
+            className="bg-[#FF6B6B]/80 p-4 rounded-xl items-center mb-6" 
             onPress={handleSignOut}
             disabled={loading}
           >
@@ -147,7 +169,7 @@ const TestFirebaseScreen = ({ navigation }) => {
         <View className="bg-ghost-card rounded-2xl p-4 border border-ghost-border">
           <Text className="text-lg font-bold text-ghost-text mb-2">Test Logs</Text>
           <ScrollView 
-            className="max-h-60 bg-ghost-bg-deep rounded-xl p-4" 
+            className="max-h-60 bg-[#1A1A1E] rounded-xl p-4" 
             nestedScrollEnabled={true}
           >
             {logs.length === 0 ? (
@@ -156,7 +178,7 @@ const TestFirebaseScreen = ({ navigation }) => {
               logs.map((log, index) => (
                 <Text 
                   key={index} 
-                  className={`text-sm mb-1 ${log.isError ? 'text-ghost-coral' : 'text-ghost-text'}`}
+                  className={`text-sm mb-1 ${log.isError ? 'text-[#FF6B6B]' : 'text-ghost-text'}`}
                 >
                   <Text className="text-ghost-text-secondary">[{log.timestamp}]</Text> {log.message}
                 </Text>

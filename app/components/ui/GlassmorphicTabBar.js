@@ -1,14 +1,28 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Home, Users, BookMarked, User, FlaskConical } from 'lucide-react-native';
 import { colors } from '../../theme';
 
-// Tab Icons (we'll use emoji placeholders for now, would be replaced with proper icons)
-const tabIcons = {
-  Home: '🏠',
-  Spaces: '👥',
-  Memory: '💭',
-  Profile: '👤',
+// Tab icon mapping component
+const TabIcon = ({ routeName, isFocused }) => {
+  const iconColor = isFocused ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)';
+  const iconSize = 22;
+  
+  switch (routeName) {
+    case 'Home':
+      return <Home size={iconSize} color={iconColor} strokeWidth={1.5} />;
+    case 'Spaces':
+      return <Users size={iconSize} color={iconColor} strokeWidth={1.5} />;
+    case 'Memory':
+      return <BookMarked size={iconSize} color={iconColor} strokeWidth={1.5} />;
+    case 'Profile':
+      return <User size={iconSize} color={iconColor} strokeWidth={1.5} />;
+    case 'TestFirebase':
+      return <FlaskConical size={iconSize} color={iconColor} strokeWidth={1.5} />;
+    default:
+      return null;
+  }
 };
 
 const GlassmorphicTabBar = ({ state, descriptors, navigation }) => {
@@ -45,8 +59,9 @@ const GlassmorphicTabBar = ({ state, descriptors, navigation }) => {
               style={styles.tabButton}
             >
               <View style={[styles.tabContent, isFocused && styles.activeTabContent]}>
-                <Text style={styles.tabIcon}>{tabIcons[route.name]}</Text>
-                {isFocused && <Text style={styles.tabLabel}>{label}</Text>}
+                <View style={styles.iconContainer}>
+                  <TabIcon routeName={route.name} isFocused={isFocused} />
+                </View>
               </View>
               {isFocused && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
@@ -73,7 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(32, 32, 36, 0.75)',
+    backgroundColor: 'rgba(32, 32, 36, 0.85)',
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
     shadowColor: '#000',
@@ -87,33 +102,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
   },
   activeTabContent: {
-    flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  tabIcon: {
-    fontSize: 20,
-    marginRight: 4,
-  },
-  tabLabel: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '500',
+    padding: 10,
+    alignItems: 'center',
   },
   activeIndicator: {
     position: 'absolute',
     bottom: 0,
     height: 3,
-    width: 10,
-    backgroundColor: '#4ECDC4', // Using teal color for indicator
+    width: 20,
+    backgroundColor: '#4ECDC4', // Teal accent color
     borderRadius: 1.5,
   },
 });

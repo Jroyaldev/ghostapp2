@@ -20,6 +20,7 @@ import SpacesScreen from '../screens/SpacesScreen';
 import MemoryScreen from '../screens/MemoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import TestFirebaseScreen from '../screens/TestFirebaseScreen';
+import GhostChatScreen from '../screens/GhostChatScreen';
 
 // Custom tab bar component
 import GlassmorphicTabBar from '../components/ui/GlassmorphicTabBar';
@@ -42,6 +43,21 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
+// Primary Navigation Flow
+const AppStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#121214' }
+      }}
+    >
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="GhostChat" component={GhostChatScreen} />
+    </Stack.Navigator>
+  );
+};
+
 // Main Tab Navigator
 const MainTabs = () => (
   <Tab.Navigator
@@ -55,21 +71,7 @@ const MainTabs = () => (
     <Tab.Screen name="Spaces" component={SpacesScreen} />
     <Tab.Screen name="Memory" component={MemoryScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
-    <Tab.Screen 
-      name="TestFirebase" 
-      component={TestFirebaseScreen} 
-      options={{ 
-        tabBarIcon: ({ focused }) => (
-          <Text style={{ 
-            color: focused ? '#3ECFB2' : '#6B7280',
-            fontWeight: focused ? 'bold' : 'normal',
-            fontSize: 10
-          }}>
-            Firebase
-          </Text>
-        ) 
-      }}
-    />
+    <Tab.Screen name="TestFirebase" component={TestFirebaseScreen} />
   </Tab.Navigator>
 );
 
@@ -99,7 +101,7 @@ const RootNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {user && !pendingVerification ? (
-        <Stack.Screen name="MainApp" component={MainTabs} />
+        <Stack.Screen name="MainApp" component={AppStack} />
       ) : (
         <Stack.Screen name="Auth" component={AuthStack} />
       )}
