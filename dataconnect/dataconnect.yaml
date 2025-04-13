@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "ghostmode-app-mockup"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "ghostmode-app-mockup-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

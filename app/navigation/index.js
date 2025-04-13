@@ -4,13 +4,14 @@
  * and stack navigators for each main section
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Text, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useAuth } from '../context/AuthContext';
 
 // Screen imports
-import AuthLoadingScreen from '../screens/AuthLoadingScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -18,6 +19,7 @@ import HomeScreen from '../screens/HomeScreen';
 import SpacesScreen from '../screens/SpacesScreen';
 import MemoryScreen from '../screens/MemoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import TestFirebaseScreen from '../screens/TestFirebaseScreen';
 
 // Custom tab bar component
 import GlassmorphicTabBar from '../components/ui/GlassmorphicTabBar';
@@ -26,8 +28,8 @@ import GlassmorphicTabBar from '../components/ui/GlassmorphicTabBar';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Navigator
-const AuthNavigator = () => (
+// Auth Stack Navigator
+const AuthStack = () => (
   <Stack.Navigator 
     screenOptions={{
       headerShown: false,
@@ -41,36 +43,69 @@ const AuthNavigator = () => (
 );
 
 // Main Tab Navigator
-const MainTabNavigator = () => (
+const MainTabs = () => (
   <Tab.Navigator
     tabBar={props => <GlassmorphicTabBar {...props} />}
     screenOptions={{
       headerShown: false,
       tabBarShowLabel: false,
     }}
-    initialRouteName="Home"
   >
     <Tab.Screen name="Home" component={HomeScreen} />
     <Tab.Screen name="Spaces" component={SpacesScreen} />
     <Tab.Screen name="Memory" component={MemoryScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen 
+      name="TestFirebase" 
+      component={TestFirebaseScreen} 
+      options={{ 
+        tabBarIcon: ({ focused }) => (
+          <Text style={{ 
+            color: focused ? '#3ECFB2' : '#6B7280',
+            fontWeight: focused ? 'bold' : 'normal',
+            fontSize: 10
+          }}>
+            Firebase
+          </Text>
+        ) 
+      }}
+    />
   </Tab.Navigator>
 );
 
-// Root Navigator
-const RootNavigator = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-      contentStyle: { backgroundColor: '#121214' }
-    }}
-    initialRouteName="AuthLoading"
-  >
-    <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
-    <Stack.Screen name="Auth" component={AuthNavigator} />
-    <Stack.Screen name="Main" component={MainTabNavigator} />
-  </Stack.Navigator>
-);
+// Root Navigator that includes both auth and main flows
+const RootNavigator = () => {
+  const { user, loading, pendingVerification } = useAuth();
+
+  console.log('RootNavigator - Auth state:', { 
+    userExists: !!user, 
+    userId: user?.uid, 
+    loading, 
+    pendingVerification 
+  });
+  
+  // Simple loading screen
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121214' }}>
+        <Text style={{ color: '#fff', marginBottom: 10 }}>Loading GhostMode...</Text>
+        <ActivityIndicator size="large" color="#3ECFB2" />
+      </View>
+    );
+  }
+
+  // When not loading, show either auth flow or main app based on authentication state
+  // If pendingVerification is true, we need to keep the user in the auth flow
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {user && !pendingVerification ? (
+        <Stack.Screen name="MainApp" component={MainTabs} />
+      ) : (
+        <Stack.Screen name="Auth" component={AuthStack} />
+      )}
+    </Stack.Navigator>
+  );
+};
 
 // Main Navigation Container
 const Navigation = () => {

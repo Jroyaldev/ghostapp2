@@ -4,18 +4,29 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme';
 
 const AuthLoadingScreen = ({ navigation }) => {
-  const { user, initializing } = useAuth();
+  const { user, initialized } = useAuth();
+
+  // Log for debugging
+  console.log('AuthLoadingScreen - User:', user?.uid, 'Initialized:', initialized);
 
   useEffect(() => {
     // Check authentication state and navigate accordingly
-    if (!initializing) {
+    if (initialized) {
       if (user) {
-        navigation.replace('Main');
+        console.log('AuthLoadingScreen - Navigating to Main');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
       } else {
-        navigation.replace('Auth');
+        console.log('AuthLoadingScreen - Navigating to Auth');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }],
+        });
       }
     }
-  }, [user, initializing, navigation]);
+  }, [user, initialized, navigation]);
 
   return (
     <View className="flex-1 bg-ghost-bg justify-center items-center">

@@ -7,20 +7,17 @@ const ProfileScreen = () => {
 
   const handleSignOut = async () => {
     Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
+      'Sign Out',
+      'Are you sure you want to sign out?',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         { 
-          text: "Sign Out", 
-          style: "destructive",
-          onPress: async () => {
-            const success = await signOut();
-            if (!success) {
-              Alert.alert("Error", "Failed to sign out. Please try again.");
-            }
-          } 
-        }
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: () => {
+            signOut();
+          }
+        },
       ]
     );
   };

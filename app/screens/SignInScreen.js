@@ -1,23 +1,107 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme';
 
 const SignInScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { signIn, loading } = useAuth();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const { 
+    phoneSignIn, 
+    verifyCode, 
+    loading, 
+    user, 
+    recaptchaVerifier, 
+    pendingVerification,
+    verificationPhoneNumber 
+  } = useAuth();
 
-  const handleSignIn = async () => {
-    if (email.trim() === '' || password === '') {
-      alert('Please enter both email and password');
+  // Debug message to track component rendering
+  console.log('SignInScreen rendered, codeSent:', codeSent, 'pendingVerification:', pendingVerification);
+
+  // When user state changes, check if we should navigate
+  useEffect(() => {
+    if (user) {
+      console.log('SignInScreen - User authenticated:', user.uid);
+    }
+  }, [user]);
+
+  // Set codeSent state based on pendingVerification from auth context
+  useEffect(() => {
+    if (pendingVerification) {
+      setCodeSent(true);
+      console.log('Setting codeSent to true because pendingVerification is true');
+    }
+  }, [pendingVerification]);
+
+  // Pre-fill phone number from context if available
+  useEffect(() => {
+    if (verificationPhoneNumber && !phoneNumber) {
+      setPhoneNumber(verificationPhoneNumber);
+      console.log('Pre-filling phone number from context:', verificationPhoneNumber);
+    }
+  }, [verificationPhoneNumber, phoneNumber]);
+
+  const handleSendCode = () => {
+    if (phoneNumber.trim() === '') {
+      Alert.alert('GhostMode', 'Please enter your phone number');
       return;
     }
 
-    const success = await signIn(email, password);
-    if (success) {
-      // Auth context will automatically navigate to Main screen once user is authenticated
+    // Show confirmation to user before continuing
+    Alert.alert(
+      'Verify Phone Number',
+      `We'll send a verification code to: ${phoneNumber}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Send Code', 
+          onPress: () => {
+            if (!recaptchaVerifier.current) {
+              Alert.alert('GhostMode', 'reCAPTCHA verifier is not initialized. Please try again.');
+              return;
+            }
+
+            phoneSignIn(phoneNumber, (verificationId) => {
+              // On success callback
+              console.log('Code sent successfully to:', phoneNumber);
+              setCodeSent(true);
+            }, (error) => {
+              // On error callback
+              Alert.alert('GhostMode', `Error sending verification code: ${error.message || error}`);
+            });
+          }
+        }
+      ]
+    );
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.trim().length < 6) {
+      Alert.alert('GhostMode', 'Please enter a valid 6-digit verification code');
+      return;
     }
+
+    // Log the verification attempt
+    console.log(`Attempting verification for ${phoneNumber} with code ${verificationCode}`);
+    
+    try {
+      // Verify the code - this will set the user in the auth context
+      const success = await verifyCode(phoneNumber, verificationCode);
+      console.log('Verification result:', success ? 'success' : 'failed');
+      
+      if (!success) {
+        Alert.alert('GhostMode', 'Invalid verification code. Please try again.');
+      }
+    } catch (error) {
+      Alert.alert('GhostMode', `Verification error: ${error.message || error}`);
+    }
+  };
+
+  const handleChangePhoneNumber = () => {
+    // This function resets the verification state completely
+    setCodeSent(false);
+    setVerificationCode('');
   };
 
   return (
@@ -42,45 +126,65 @@ const SignInScreen = ({ navigation }) => {
           
           {/* Form */}
           <View className="mb-6">
-            <View className="mb-4">
-              <Text className="text-ghost-text-secondary mb-2">Email</Text>
-              <TextInput
-                className="bg-ghost-card border border-ghost-border rounded-xl p-4 text-ghost-text"
-                placeholder="your@email.com"
-                placeholderTextColor="#6B7280"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            
-            <View className="mb-4">
-              <Text className="text-ghost-text-secondary mb-2">Password</Text>
-              <TextInput
-                className="bg-ghost-card border border-ghost-border rounded-xl p-4 text-ghost-text"
-                placeholder="Your password"
-                placeholderTextColor="#6B7280"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
+            {!codeSent ? (
+              // Phone number input
+              <View className="mb-4">
+                <Text className="text-ghost-text-secondary mb-2">Phone Number</Text>
+                <TextInput
+                  className="bg-ghost-card border border-ghost-border rounded-xl p-4 text-ghost-text"
+                  placeholder="+1 (555) 123-4567"
+                  placeholderTextColor="#6B7280"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                  autoCompleteType="tel"
+                />
+                <Text className="text-ghost-text-secondary text-xs mt-2">Enter your phone number with country code</Text>
+              </View>
+            ) : (
+              // Verification code input
+              <View className="mb-4">
+                <Text className="text-ghost-text-secondary mb-2">Verification Code</Text>
+                <TextInput
+                  className="bg-ghost-card border border-ghost-border rounded-xl p-4 text-ghost-text"
+                  placeholder="Enter the code sent to your phone"
+                  placeholderTextColor="#6B7280"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus={true}
+                />
+                <Text className="text-ghost-text-secondary text-xs mt-2">Enter the 6-digit code sent to your phone</Text>
+              </View>
+            )}
           </View>
           
           {/* Actions */}
           <View>
             <TouchableOpacity 
               className="bg-ghost-teal p-4 rounded-xl items-center"
-              onPress={handleSignIn}
+              onPress={codeSent ? handleVerifyCode : handleSendCode}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text className="text-white font-semibold">Sign In</Text>
+                <Text className="text-white font-semibold">
+                  {codeSent ? "Verify Code" : "Send Verification Code"}
+                </Text>
               )}
             </TouchableOpacity>
+            
+            {codeSent && (
+              <TouchableOpacity 
+                className="mt-4 p-2 items-center"
+                onPress={handleChangePhoneNumber}
+                disabled={loading}
+              >
+                <Text className="text-ghost-teal">Change Phone Number</Text>
+              </TouchableOpacity>
+            )}
             
             <TouchableOpacity 
               className="mt-4 p-4 items-center"

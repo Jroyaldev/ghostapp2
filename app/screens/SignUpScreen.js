@@ -1,29 +1,50 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme';
 
 const SignUpScreen = ({ navigation }) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { signUp, loading } = useAuth();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const { phoneSignIn, verifyCode, loading, user } = useAuth();
+
+  // When user state changes, check if we should navigate
+  useEffect(() => {
+    if (user) {
+      console.log('SignUpScreen - User authenticated, navigating to Main');
+      // No need to navigate manually - navigation container will handle this
+    }
+  }, [user, navigation]);
+
+  const handleSendCode = () => {
+    if (name.trim() === '' || phoneNumber.trim() === '') {
+      Alert.alert('GhostMode', 'Please enter your name and phone number');
+      return;
+    }
+
+    // Format phone number if needed (remove non-numeric chars)
+    const formattedPhone = phoneNumber.replace(/\D/g, '');
+    
+    // Send verification code
+    phoneSignIn(formattedPhone, () => {
+      // On success callback
+      setCodeSent(true);
+    }, (error) => {
+      // On error callback
+      Alert.alert('GhostMode', `Error sending verification code: ${error}`);
+    });
+  };
 
   const handleSignUp = async () => {
-    if (name.trim() === '' || email.trim() === '' || password === '') {
-      alert('Please fill in all fields');
+    if (verificationCode.trim() === '') {
+      Alert.alert('GhostMode', 'Please enter the verification code');
       return;
     }
 
-    if (password.length < 6) {
-      alert('Password must be at least 6 characters');
-      return;
-    }
-
-    const success = await signUp(email, password, name);
-    if (success) {
-      // Auth context will automatically navigate to Main screen once user is authenticated
-    }
+    // Verify the code and create the account
+    verifyCode(phoneNumber, verificationCode, name);
+    // No need to navigate manually - the navigation container will handle this
   };
 
   return (
@@ -40,65 +61,84 @@ const SignUpScreen = ({ navigation }) => {
               className="w-24 h-24 mb-4"
               resizeMode="contain"
             />
-            <Text className="text-2xl font-bold text-ghost-text">Create Account</Text>
-            <Text className="text-base text-ghost-text-secondary text-center mt-2">
-              Join the GhostMode experience
+            <Text className="text-ghost-text text-2xl font-bold">Create Account</Text>
+            <Text className="text-ghost-text-secondary text-center mt-2">
+              Join the conversation with GhostMode
             </Text>
           </View>
           
           {/* Form */}
           <View className="mb-6">
-            <View className="mb-4">
-              <Text className="text-sm text-ghost-text-secondary mb-1">Name</Text>
-              <TextInput
-                className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
-                placeholder="Enter your name"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-            </View>
-            
-            <View className="mb-4">
-              <Text className="text-sm text-ghost-text-secondary mb-1">Email</Text>
-              <TextInput
-                className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
-                placeholder="Enter your email"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            
-            <View className="mb-4">
-              <Text className="text-sm text-ghost-text-secondary mb-1">Password</Text>
-              <TextInput
-                className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
-                placeholder="Create a password"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
+            {!codeSent ? (
+              // Step 1: Enter name and phone
+              <>
+                <View className="mb-4">
+                  <Text className="text-sm text-ghost-text-secondary mb-1">Name</Text>
+                  <TextInput
+                    className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
+                    placeholder="Your name"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                  />
+                </View>
+                
+                <View className="mb-4">
+                  <Text className="text-sm text-ghost-text-secondary mb-1">Phone Number</Text>
+                  <TextInput
+                    className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
+                    placeholder="+1 (555) 123-4567"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    autoCompleteType="tel"
+                  />
+                </View>
+              </>
+            ) : (
+              // Step 2: Enter verification code
+              <View className="mb-4">
+                <Text className="text-sm text-ghost-text-secondary mb-1">Verification Code</Text>
+                <TextInput
+                  className="bg-ghost-card rounded-xl p-4 text-ghost-text border border-ghost-border"
+                  placeholder="Enter the code sent to your phone"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              </View>
+            )}
           </View>
           
           {/* Actions */}
           <View>
             <TouchableOpacity 
               className="bg-ghost-teal p-4 rounded-xl items-center"
-              onPress={handleSignUp}
+              onPress={codeSent ? handleSignUp : handleSendCode}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text className="text-base font-medium text-ghost-bg-deep">Create Account</Text>
+                <Text className="text-base font-medium text-ghost-bg-deep">
+                  {codeSent ? "Create Account" : "Send Verification Code"}
+                </Text>
               )}
             </TouchableOpacity>
+            
+            {codeSent && (
+              <TouchableOpacity 
+                className="mt-4 p-2 items-center"
+                onPress={() => setCodeSent(false)}
+                disabled={loading}
+              >
+                <Text className="text-ghost-teal">Change Phone Number</Text>
+              </TouchableOpacity>
+            )}
             
             <View className="flex-row justify-center mt-6">
               <Text className="text-sm text-ghost-text-secondary">Already have an account? </Text>
