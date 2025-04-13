@@ -15,7 +15,8 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GhostIcon, ArrowLeft, Settings } from 'lucide-react-native';
@@ -26,7 +27,9 @@ import MessageInput from '../components/chat/MessageInput';
 
 // Services and Utilities
 import { generateAIResponse, getGhostPersonas } from '../services/ai-service';
+import { saveMessage, getMessages } from '../services/chat-service';
 import { generateRandomId, formatDate } from '../utils/helpers';
+import { auth } from '../services/firebase';
 
 // Initial welcome message from Ghost
 const WELCOME_MESSAGE = {
@@ -40,6 +43,7 @@ const GhostChatScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [currentPersona, setCurrentPersona] = useState(getGhostPersonas()[0]);
   const listRef = useRef(null);
   const ghostOpacity = useRef(new Animated.Value(0)).current;
@@ -53,8 +57,57 @@ const GhostChatScreen = ({ navigation }) => {
     }).start();
   }, []);
   
+  // Load messages from Firebase on mount
+  useEffect(() => {
+    loadMessages();
+  }, []);
+  
+  const loadMessages = async () => {
+    try {
+      setIsInitializing(true);
+      
+      // Get the current user
+      const user = auth.currentUser;
+      if (!user) {
+        console.log('No user is signed in');
+        setIsInitializing(false);
+        return;
+      }
+      
+      // Get messages from Firebase
+      const { messages: loadedMessages, error } = await getMessages(user.uid);
+      
+      if (error) {
+        console.error('Error loading messages:', error);
+        setIsInitializing(false);
+        return;
+      }
+      
+      // If messages exist, use them, otherwise keep welcome message
+      if (loadedMessages.length > 0) {
+        setMessages(loadedMessages);
+      }
+      
+      // Scroll to bottom after loading messages
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    } catch (error) {
+      console.error('Error in loadMessages:', error);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+  
   // Function to handle sending a new message
   const handleSendMessage = async (text) => {
+    // Get current user
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Error', 'You need to be signed in to send messages');
+      return;
+    }
+    
     // Create user message
     const userMessage = {
       id: generateRandomId(),
@@ -65,6 +118,12 @@ const GhostChatScreen = ({ navigation }) => {
     
     // Update messages state with user message
     setMessages(prevMessages => [...prevMessages, userMessage]);
+    
+    // Save user message to Firebase
+    const { success, error } = await saveMessage(user.uid, userMessage);
+    if (!success) {
+      console.error('Failed to save user message:', error);
+    }
     
     // Scroll to bottom
     setTimeout(() => {
@@ -84,6 +143,12 @@ const GhostChatScreen = ({ navigation }) => {
       
       // Update messages with AI response
       setMessages(prevMessages => [...prevMessages, aiResponse]);
+      
+      // Save AI response to Firebase
+      const { success: aiSuccess, error: aiError } = await saveMessage(user.uid, aiResponse);
+      if (!aiSuccess) {
+        console.error('Failed to save AI response:', aiError);
+      }
       
       // Scroll to bottom again
       setTimeout(() => {
@@ -138,13 +203,19 @@ const GhostChatScreen = ({ navigation }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft size={22} color="#FFFFFF" strokeWidth={1.5} />
+            <ArrowLeft size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
           
           <Text style={styles.headerTitle}>Ghost Chat</Text>
           
-          <TouchableOpacity style={styles.settingsButton}>
-            <Settings size={20} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={() => {
+              // TODO: Show settings modal for chat
+              console.log('Settings button pressed');
+            }}
+          >
+            <Settings size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
         </View>
         
@@ -166,22 +237,30 @@ const GhostChatScreen = ({ navigation }) => {
         </View>
       </View>
       
-      {/* Messages list */}
-      <FlatList
-        ref={listRef}
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.messagesList}
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={15}
-        onLayout={() => {
-          // Scroll to bottom on initial render
-          listRef.current?.scrollToEnd({ animated: false });
-        }}
-      />
+      {/* Loading indicator for initial load */}
+      {isInitializing ? (
+        <View style={styles.centerLoading}>
+          <ActivityIndicator size="large" color="#3ECFB2" />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
+        </View>
+      ) : (
+        /* Messages list */
+        <FlatList
+          ref={listRef}
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={15}
+          onLayout={() => {
+            // Scroll to bottom on initial render
+            listRef.current?.scrollToEnd({ animated: false });
+          }}
+        />
+      )}
       
-      {/* Loading indicator */}
+      {/* Loading indicator for message sending */}
       {isLoading && (
         <View style={styles.loadingContainer}>
           <View style={styles.loadingBubble}>
@@ -194,7 +273,7 @@ const GhostChatScreen = ({ navigation }) => {
       {/* Message input */}
       <MessageInput 
         onSend={handleSendMessage} 
-        disabled={isLoading}
+        disabled={isLoading || isInitializing}
       />
       <SafeAreaView style={{ backgroundColor: '#121214' }} />
     </KeyboardAvoidingView>
@@ -311,6 +390,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     marginLeft: 8,
     fontSize: 14,
+  },
+  centerLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
