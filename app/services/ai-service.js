@@ -5,6 +5,7 @@
 
 import { Platform } from 'react-native';
 import { generateRandomId } from '../utils/helpers';
+import config from '../config/environment';
 
 // Configure logging
 const logSafely = (message, data) => {
@@ -20,11 +21,10 @@ const logSafely = (message, data) => {
 // API Keys (in production these would be securely stored)
 // For development use the values from the .env file
 const DEEPSEEK_API_KEY = 'sk-6d724a5a45244a95a1b150d262865108';
-const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+const DEEPSEEK_API_URL = `${config.apiUrl}/chat/completions`;
 
-// Configuration constants
-const USE_REAL_API = true; // Set to true to use actual API calls
-const DEV_RESPONSE_DELAY = 1000; // Simulated response delay for development
+// Use environment-specific configuration
+const USE_REAL_API = config.useRealApi;
 
 /**
  * Format conversation history for the AI prompt
@@ -46,6 +46,17 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
   try {
     logSafely('Generating AI response for message', userMessage);
     logSafely('Using Ghost persona', ghostPersona);
+    
+    // If not using real API in this environment, use mock responses
+    if (!USE_REAL_API) {
+      // Return mock response with error indicating environment configuration
+      return {
+        id: generateRandomId(),
+        text: "I'm currently configured to use mock responses. To use real AI, update the useRealApi setting in your environment configuration.",
+        isUser: false,
+        timestamp: new Date().toISOString(),
+      };
+    }
     
     // Format history for the prompt
     const historyText = formatConversationHistory(conversationHistory);

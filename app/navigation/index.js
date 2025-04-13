@@ -18,9 +18,11 @@ import SignUpScreen from '../screens/SignUpScreen';
 import HomeScreen from '../screens/HomeScreen';
 import SpacesScreen from '../screens/SpacesScreen';
 import MemoryScreen from '../screens/MemoryScreen';
+import MemoriesScreen from '../screens/MemoriesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import TestFirebaseScreen from '../screens/TestFirebaseScreen';
 import GhostChatScreen from '../screens/GhostChatScreen';
+import SpaceChatScreen from '../screens/SpaceChatScreen';
 
 // Custom tab bar component
 import GlassmorphicTabBar from '../components/ui/GlassmorphicTabBar';
@@ -54,6 +56,8 @@ const AppStack = () => {
     >
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="GhostChat" component={GhostChatScreen} />
+      <Stack.Screen name="Memories" component={MemoriesScreen} />
+      <Stack.Screen name="SpaceChat" component={SpaceChatScreen} />
     </Stack.Navigator>
   );
 };

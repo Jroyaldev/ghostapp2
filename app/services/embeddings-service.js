@@ -4,6 +4,7 @@
  */
 
 import { generateRandomId } from '../utils/helpers';
+import config from '../config/environment';
 
 // Configure logging
 const logSafely = (message, data) => {
@@ -16,14 +17,12 @@ const logSafely = (message, data) => {
   }
 };
 
-// API Keys and configuration
-const OPENAI_API_KEY = ''; // Replace with actual key if needed
+// API Keys and configuration - these would be better stored in environment variables
 const DEEPSEEK_API_KEY = 'sk-6d724a5a45244a95a1b150d262865108';
-const USE_REAL_API = false; // Set to true to use actual API calls
+const USE_REAL_API = config.useRealApi;
 
-// Default to OpenAI embeddings which are widely used and reliable
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"; // OpenAI's efficient embedding model
-const EMBEDDING_DIMENSION = 1536; // Embedding dimension for OpenAI models
+// Default embedding dimensions and models
+const EMBEDDING_DIMENSION = 20; // Reduced dimension for DeepSeek chat-based embeddings
 
 /**
  * Generate an embedding vector for text using available APIs
@@ -32,22 +31,21 @@ export const generateEmbedding = async (text) => {
   try {
     logSafely('Generating embedding for text', text.substring(0, 50) + '...');
     
-    // In development, use a mock embedding if needed
-    if (__DEV__ && !USE_REAL_API) {
+    // In development, use a mock embedding if not using real API
+    if (!USE_REAL_API) {
+      logSafely('Using mock embedding (USE_REAL_API is false)');
       return mockEmbedding(text);
     }
     
-    // Try OpenAI first, then fall back to DeepSeek if needed
-    if (OPENAI_API_KEY) {
-      const embedding = await generateOpenAIEmbedding(text);
+    // Use DeepSeek for embeddings
+    if (DEEPSEEK_API_KEY) {
+      const embedding = await generateDeepSeekChatEmbedding(text);
       if (embedding) return embedding;
     }
     
-    if (DEEPSEEK_API_KEY) {
-      return await generateDeepSeekChatEmbedding(text);
-    }
-    
-    throw new Error('No API keys available for embedding generation');
+    // Fall back to mock embeddings if all else fails
+    logSafely('Falling back to mock embedding');
+    return mockEmbedding(text);
   } catch (error) {
     logSafely('Error generating embedding', error.message);
     return mockEmbedding(text);
@@ -55,52 +53,9 @@ export const generateEmbedding = async (text) => {
 };
 
 /**
- * Generate embedding using OpenAI's embedding API
- */
-const generateOpenAIEmbedding = async (text) => {
-  try {
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`
-    };
-    
-    // Use the recommended model
-    const payload = {
-      "model": "text-embedding-3-small",
-      "input": text
-    };
-    
-    logSafely('Making embedding request to OpenAI API');
-    
-    const response = await fetch(
-      "https://api.openai.com/v1/embeddings",
-      {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payload)
-      }
-    );
-    
-    if (response.ok) {
-      const responseData = await response.json();
-      const embedding = responseData.data[0].embedding;
-      logSafely(`Generated OpenAI embedding with dimension ${embedding.length}`);
-      return embedding;
-    } else {
-      const errorText = await response.text();
-      logSafely(`Error generating OpenAI embedding: ${errorText}`);
-      return null;
-    }
-  } catch (error) {
-    logSafely(`Exception during OpenAI embedding generation: ${error.message}`);
-    return null;
-  }
-};
-
-/**
  * Generate a basic embedding using DeepSeek chat as fallback
  * This is a workaround that asks the LLM to generate a simplified embedding
- * representation. Not as good as real embeddings but better than nothing.
+ * representation. Not as good as dedicated embedding models but works for our purposes.
  */
 const generateDeepSeekChatEmbedding = async (text) => {
   try {
@@ -129,7 +84,7 @@ const generateDeepSeekChatEmbedding = async (text) => {
     logSafely('Making chat-based embedding request to DeepSeek API');
     
     const response = await fetch(
-      "https://api.deepseek.com/v1/chat/completions",
+      config.apiUrl + "/chat/completions",
       {
         method: 'POST',
         headers: headers,
@@ -151,14 +106,14 @@ const generateDeepSeekChatEmbedding = async (text) => {
           logSafely(`Generated DeepSeek chat-based embedding with dimension ${embeddingArray.length}`);
           
           // Pad or truncate to expected dimension
-          const paddedEmbedding = embeddingArray.slice(0, 20); // Truncate if longer
-          while (paddedEmbedding.length < 20) {
+          const paddedEmbedding = embeddingArray.slice(0, EMBEDDING_DIMENSION); // Truncate if longer
+          while (paddedEmbedding.length < EMBEDDING_DIMENSION) {
             paddedEmbedding.push(0.0); // Pad if shorter
           }
           
           return paddedEmbedding;
         } else {
-          logSafely('Could not extract embedding array from DeepSeek response');
+          logSafely('Could not extract embedding array from DeepSeek response, response was:', responseContent);
           return null;
         }
       } catch (error) {
@@ -246,8 +201,7 @@ export const createEmbeddingCache = async (conversationHistory) => {
 const mockEmbedding = (text) => {
   // Create a deterministic but unique embedding based on text content
   // This is just for development/testing and not for production use
-  const mockDimension = 20;
-  const embedding = new Array(mockDimension).fill(0);
+  const embedding = new Array(EMBEDDING_DIMENSION).fill(0);
   
   // Use the string to generate some variation in the embedding
   let hash = 0;
@@ -257,7 +211,7 @@ const mockEmbedding = (text) => {
   }
   
   // Use the hash to seed the embedding values
-  for (let i = 0; i < mockDimension; i++) {
+  for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
     // Generate a value between -1 and 1 based on the hash and position
     embedding[i] = Math.sin(hash * (i + 1)) / 2;
   }

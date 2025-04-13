@@ -5,6 +5,7 @@
 
 import { firestore } from './firebase';
 import { generateRandomId } from '../utils/helpers';
+import config from '../config/environment';
 
 // Configure logging
 const logSafely = (message, data) => {
@@ -31,9 +32,12 @@ export const saveMessage = async (userId, message) => {
       createdAt: firestore.FieldValue.serverTimestamp(),
     };
     
+    // Get the collection path from environment config
+    const collectionPath = config.firestorePaths.userChats(userId);
+    
     // Add to user's ghost chat collection
     await firestore
-      .collection(`users/${userId}/ghostchat`)
+      .collection(collectionPath)
       .add(messageToSave);
     
     return { success: true };
@@ -50,9 +54,12 @@ export const getMessages = async (userId, limit = 100) => {
   try {
     logSafely('Getting messages for user', userId);
     
+    // Get the collection path from environment config
+    const collectionPath = config.firestorePaths.userChats(userId);
+    
     // Get messages from user's ghost chat collection, sorted by timestamp
     const messagesSnapshot = await firestore
-      .collection(`users/${userId}/ghostchat`)
+      .collection(collectionPath)
       .orderBy('timestamp', 'desc')
       .limit(limit)
       .get();
@@ -82,6 +89,9 @@ export const saveBatchMessages = async (userId, messages) => {
   try {
     logSafely('Saving batch of messages', messages.length);
     
+    // Get the collection path from environment config
+    const collectionPath = config.firestorePaths.userChats(userId);
+    
     // Process messages in batches
     const promises = messages.map(message => {
       const messageToSave = {
@@ -91,7 +101,7 @@ export const saveBatchMessages = async (userId, messages) => {
       };
       
       return firestore
-        .collection(`users/${userId}/ghostchat`)
+        .collection(collectionPath)
         .add(messageToSave);
     });
     
@@ -111,16 +121,19 @@ export const clearMessages = async (userId) => {
   try {
     logSafely('Clearing messages for user', userId);
     
+    // Get the collection path from environment config
+    const collectionPath = config.firestorePaths.userChats(userId);
+    
     // Get all messages
     const messagesSnapshot = await firestore
-      .collection(`users/${userId}/ghostchat`)
+      .collection(collectionPath)
       .get();
     
     // Delete each message
     const promises = [];
     messagesSnapshot.forEach((doc) => {
       promises.push(firestore
-        .collection(`users/${userId}/ghostchat`)
+        .collection(collectionPath)
         .doc(doc.id)
         .delete());
     });

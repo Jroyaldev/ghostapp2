@@ -1,27 +1,60 @@
 /**
  * Chat Bubble Component
- * Renders a single message bubble with glassmorphic styling
+ * Displays a single message with glassmorphic styling
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { formatTime } from '../../utils/helpers';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { formatTimeAgo } from '../../utils/helpers';
+import { Bookmark } from 'lucide-react-native';
 
-const ChatBubble = ({ message, onLongPress }) => {
-  const { text, isUser, timestamp } = message;
+const ChatBubble = ({ message, onLongPress, isSavedMemory = false }) => {
+  const isUser = message.isUser;
   
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       activeOpacity={0.8}
-      onLongPress={() => onLongPress && onLongPress(message)}
-      style={[styles.container, isUser ? styles.userContainer : styles.aiContainer]}
+      onLongPress={() => onLongPress(message)}
+      style={[
+        styles.container,
+        isUser ? styles.userContainer : styles.ghostContainer,
+      ]}
     >
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
-        <Text style={[styles.text, isUser ? styles.userText : styles.aiText]}>{text}</Text>
+      <View 
+        style={[
+          styles.bubble, 
+          isUser ? styles.userBubble : styles.ghostBubble,
+          // Add a subtle glow for saved memories
+          isSavedMemory && styles.savedMemoryBubble
+        ]}
+      >
+        {/* Message text */}
+        <Text 
+          style={[
+            styles.text,
+            isUser ? styles.userText : styles.ghostText
+          ]}
+        >
+          {message.text}
+        </Text>
         
-        {/* Time badge */}
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeText}>{formatTime(timestamp)}</Text>
+        {/* Footer with time */}
+        <View style={styles.footer}>
+          <Text 
+            style={[
+              styles.time,
+              isUser ? styles.userTime : styles.ghostTime
+            ]}
+          >
+            {formatTimeAgo(message.timestamp)}
+          </Text>
+          
+          {/* Memory indicator */}
+          {isSavedMemory && (
+            <View style={styles.memoryIndicator}>
+              <Bookmark size={12} color="#3ECFB2" strokeWidth={2} />
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -30,55 +63,67 @@ const ChatBubble = ({ message, onLongPress }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    maxWidth: '85%',
+    marginBottom: 8,
+    maxWidth: '90%',
     alignSelf: 'flex-start',
   },
   userContainer: {
     alignSelf: 'flex-end',
   },
-  aiContainer: {
+  ghostContainer: {
     alignSelf: 'flex-start',
   },
   bubble: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    paddingBottom: 25, // Extra padding at bottom for time badge
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
   },
   userBubble: {
-    backgroundColor: 'rgba(62, 207, 178, 0.15)',
-    borderColor: 'rgba(62, 207, 178, 0.3)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(62, 207, 178, 0.12)',
+    borderColor: 'rgba(62, 207, 178, 0.2)',
   },
-  aiBubble: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderWidth: 1,
+  ghostBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  // Special styling for saved memories - subtle glow effect
+  savedMemoryBubble: {
+    shadowColor: '#3ECFB2',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+    borderColor: 'rgba(62, 207, 178, 0.3)',
   },
   text: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
   },
   userText: {
     color: '#FFFFFF',
   },
-  aiText: {
+  ghostText: {
     color: '#FFFFFF',
   },
-  timeBadge: {
-    position: 'absolute',
-    bottom: 6,
-    right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 6,
   },
-  timeText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 10,
+  time: {
+    fontSize: 11,
+    opacity: 0.6,
   },
+  userTime: {
+    color: '#FFFFFF',
+  },
+  ghostTime: {
+    color: '#FFFFFF',
+  },
+  memoryIndicator: {
+    marginLeft: 5,
+  }
 });
 
 export default ChatBubble;

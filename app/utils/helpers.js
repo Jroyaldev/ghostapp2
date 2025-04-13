@@ -55,3 +55,45 @@ export const formatDate = (timestamp) => {
     day: 'numeric'
   });
 };
+
+/**
+ * Format a timestamp as a relative time ago string
+ * @param {string} timestamp - ISO timestamp string
+ * @returns {string} Formatted relative time (e.g., "just now", "5m ago", "2h ago")
+ */
+export const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return '';
+  
+  const date = new Date(timestamp);
+  const now = new Date();
+  const secondsAgo = Math.floor((now - date) / 1000);
+  
+  // Less than a minute
+  if (secondsAgo < 60) {
+    return 'just now';
+  }
+  
+  // Less than an hour
+  if (secondsAgo < 3600) {
+    const minutes = Math.floor(secondsAgo / 60);
+    return `${minutes}m ago`;
+  }
+  
+  // Less than a day
+  if (secondsAgo < 86400) {
+    const hours = Math.floor(secondsAgo / 3600);
+    return `${hours}h ago`;
+  }
+  
+  // Less than a week
+  if (secondsAgo < 604800) {
+    const days = Math.floor(secondsAgo / 86400);
+    return `${days}d ago`;
+  }
+  
+  // Otherwise return formatted date
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  });
+};

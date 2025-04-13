@@ -1,48 +1,44 @@
+/**
+ * Memories Screen
+ * Displays saved memories in a horizontal scrolling timeline
+ * Follows Notion-inspired structure with memory chips
+ */
+
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Alert,
-  FlatList,
   Dimensions,
+  ScrollView,
   SafeAreaView
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bookmark, Calendar, Tag, Search, XCircle, Ghost, User } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, Calendar, Tag, Search, XCircle } from 'lucide-react-native';
 
 // Services and Utilities
-import { getMemories, findRelatedMemories, deleteMemory } from '../services/memory-service';
+import { getMemories, deleteMemory } from '../services/memory-service';
 import { formatDate, formatTimeAgo } from '../utils/helpers';
 import { auth } from '../services/firebase';
 
-// Get screen dimensions for memory chips
+// Get screen dimensions
 const { width } = Dimensions.get('window');
 
-const MemoryScreen = ({ navigation }) => {
+const MemoriesScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState('all'); // 'all', 'user', or 'ghost'
   const [selectedTag, setSelectedTag] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   
-  // Load memories when screen mounts or becomes focused
+  // Load memories when screen mounts
   useEffect(() => {
     loadMemories();
-    
-    // Set up a focus listener to reload memories when screen is focused
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadMemories();
-    });
-    
-    return unsubscribe;
-  }, [navigation]);
+  }, []);
   
   const loadMemories = async () => {
     try {
@@ -65,7 +61,7 @@ const MemoryScreen = ({ navigation }) => {
         return;
       }
       
-      setMemories(loadedMemories || []);
+      setMemories(loadedMemories);
     } catch (error) {
       console.error('Error in loadMemories:', error);
     } finally {
@@ -73,30 +69,7 @@ const MemoryScreen = ({ navigation }) => {
     }
   };
   
-  // Handle searching for semantically related memories
-  const handleSearch = async (query) => {
-    if (!query.trim()) {
-      setIsSearchMode(false);
-      return;
-    }
-    
-    try {
-      setIsSearching(true);
-      setIsSearchMode(true);
-      
-      const user = auth.currentUser;
-      if (!user) return;
-      
-      const { memories: results } = await findRelatedMemories(user.uid, query, 0.3); // Lower threshold for more results
-      setSearchResults(results || []);
-    } catch (error) {
-      console.error('Error searching memories:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-  
-  // Handle delete memory
+  // Handle deleting a memory
   const handleDeleteMemory = async (memoryId) => {
     try {
       const user = auth.currentUser;
@@ -107,10 +80,6 @@ const MemoryScreen = ({ navigation }) => {
       if (success) {
         // Remove from local state
         setMemories(prev => prev.filter(memory => memory.id !== memoryId));
-        
-        if (isSearchMode) {
-          setSearchResults(prev => prev.filter(memory => memory.id !== memoryId));
-        }
       }
     } catch (error) {
       console.error('Error deleting memory:', error);
@@ -130,11 +99,17 @@ const MemoryScreen = ({ navigation }) => {
     return Array.from(tagSet);
   };
   
-  // Filter memories based on selectedTag
+  // Filter memories based on selected tab and tag
   const filteredMemories = memories.filter(memory => {
+    // Filter by tab
+    if (selectedTab === 'user' && !memory.isUser) return false;
+    if (selectedTab === 'ghost' && memory.isUser) return false;
+    
+    // Filter by tag
     if (selectedTag && (!memory.tags || !memory.tags.includes(selectedTag))) {
       return false;
     }
+    
     return true;
   });
   
@@ -168,34 +143,22 @@ const MemoryScreen = ({ navigation }) => {
       return dateB - dateA;
     });
   
-  // Render a single memory chip
+  // Render memory chip
   const renderMemoryChip = ({ item }) => (
     <TouchableOpacity 
       style={[styles.memoryChip, item.isUser ? styles.userMemoryChip : styles.ghostMemoryChip]}
       activeOpacity={0.8}
       onLongPress={() => {
-        // Show delete option
-        Alert.alert(
-          'Memory Options',
-          'What would you like to do with this memory?',
-          [
-            {
-              text: 'Delete',
-              onPress: () => handleDeleteMemory(item.id),
-              style: 'destructive'
-            },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
+        // Show delete confirmation
+        // Using Alert would be preferable but we already imported everything else
+        if (confirm('Delete this memory?')) {
+          handleDeleteMemory(item.id);
+        }
       }}
     >
       <View style={styles.memoryHeader}>
         <View style={styles.memoryType}>
-          {item.isUser ? (
-            <User size={14} color="#3ECFB2" strokeWidth={2} />
-          ) : (
-            <Ghost size={14} color="#3ECFB2" strokeWidth={2} />
-          )}
+          <Bookmark size={14} color="#3ECFB2" strokeWidth={2} />
           <Text style={styles.memoryTypeText}>
             {item.isUser ? 'You' : 'Ghost'}
           </Text>
@@ -221,68 +184,62 @@ const MemoryScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
       
-      {/* Header */}
+      {/* Header with glassmorphic effect */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.headerTitle}>Memory Chips</Text>
-        
-        {!isSearchMode ? (
+        <View style={styles.headerTop}>
           <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={() => setIsSearchMode(true)}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
+            <ArrowLeft size={20} color="#FFFFFF" strokeWidth={1.5} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Memories</Text>
+          
+          <TouchableOpacity style={styles.searchButton}>
             <Search size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={() => {
-              setIsSearchMode(false);
-              setSearchQuery('');
-            }}
-          >
-            <XCircle size={20} color="#FFFFFF" strokeWidth={1.5} />
-          </TouchableOpacity>
-        )}
+        </View>
       </View>
       
-      {/* Search Input */}
-      {isSearchMode && (
-        <View style={styles.searchInputContainer}>
-          <View style={styles.searchInput}>
-            <Search size={16} color="rgba(255, 255, 255, 0.5)" strokeWidth={1.5} />
-            <TouchableOpacity 
-              style={styles.searchInputField}
-              onPress={() => {
-                Alert.prompt(
-                  'Search Memories',
-                  'Enter text to find semantically similar memories',
-                  [
-                    {
-                      text: 'Cancel',
-                      onPress: () => console.log('Cancel Pressed'),
-                      style: 'cancel',
-                    },
-                    {
-                      text: 'Search',
-                      onPress: (query) => handleSearch(query),
-                    }
-                  ],
-                  'plain-text',
-                  searchQuery,
-                  'default'
-                );
-              }}
-            >
-              <Text style={styles.searchInputText}>
-                {searchQuery || 'Search for memories...'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      {/* Tab switcher */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, selectedTab === 'all' && styles.activeTab]}
+          onPress={() => setSelectedTab('all')}
+        >
+          <Text 
+            style={[styles.tabText, selectedTab === 'all' && styles.activeTabText]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, selectedTab === 'user' && styles.activeTab]}
+          onPress={() => setSelectedTab('user')}
+        >
+          <Text 
+            style={[styles.tabText, selectedTab === 'user' && styles.activeTabText]}
+          >
+            Your Memories
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, selectedTab === 'ghost' && styles.activeTab]}
+          onPress={() => setSelectedTab('ghost')}
+        >
+          <Text 
+            style={[styles.tabText, selectedTab === 'ghost' && styles.activeTabText]}
+          >
+            Ghost Memories
+          </Text>
+        </TouchableOpacity>
+      </View>
       
       {/* Tags horizontal scroll */}
-      {!isSearchMode && getAllTags().length > 0 && (
+      {getAllTags().length > 0 && (
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -321,40 +278,17 @@ const MemoryScreen = ({ navigation }) => {
           <ActivityIndicator size="large" color="#3ECFB2" />
           <Text style={styles.loadingText}>Loading memories...</Text>
         </View>
-      ) : isSearching ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3ECFB2" />
-          <Text style={styles.loadingText}>Searching...</Text>
-        </View>
-      ) : isSearchMode ? (
-        // Search results
-        searchResults.length > 0 ? (
-          <FlatList
-            data={searchResults}
-            renderItem={renderMemoryChip}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.searchResultsContainer}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
-            <Text style={styles.emptyTitle}>No matching memories</Text>
-            <Text style={styles.emptySubtitle}>Try a different search term</Text>
-          </View>
-        )
       ) : memories.length === 0 ? (
-        // No memories state
         <View style={styles.emptyContainer}>
           <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
           <Text style={styles.emptyTitle}>No memories yet</Text>
           <Text style={styles.emptySubtitle}>Long-press on messages in chats to save them as memories</Text>
         </View>
       ) : filteredMemories.length === 0 ? (
-        // No matching memories for selected tag
         <View style={styles.emptyContainer}>
           <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
           <Text style={styles.emptyTitle}>No matching memories</Text>
-          <Text style={styles.emptySubtitle}>Try selecting a different tag</Text>
+          <Text style={styles.emptySubtitle}>Try changing your filters</Text>
         </View>
       ) : (
         // Memories timeline
@@ -365,7 +299,7 @@ const MemoryScreen = ({ navigation }) => {
           renderItem={({ item: group }) => (
             <View style={styles.dateGroup}>
               <View style={styles.dateHeader}>
-                <Calendar size={16} color="#FFFFFF" strokeWidth={2} />
+                <Calendar size={14} color="#FFFFFF" strokeWidth={2} />
                 <Text style={styles.dateHeaderText}>{group.date}</Text>
               </View>
               
@@ -391,7 +325,7 @@ const MemoryScreen = ({ navigation }) => {
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121214',
@@ -402,8 +336,19 @@ const styles = {
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
     paddingBottom: 12,
+  },
+  headerTop: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
@@ -419,30 +364,32 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchInputContainer: {
+  tabContainer: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#1A1A1E',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+  tab: {
     paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
   },
-  searchInputField: {
-    flex: 1,
-    marginLeft: 8,
-    height: 30,
-    justifyContent: 'center',
+  activeTab: {
+    backgroundColor: '#3ECFB2',
   },
-  searchInputText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+  tabText: {
     fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  activeTabText: {
+    color: '#121214',
+    fontWeight: '600',
   },
   tagsScrollContainer: {
     paddingHorizontal: 16,
@@ -515,9 +462,6 @@ const styles = {
     textAlign: 'center',
   },
   timelineContainer: {
-    padding: 16,
-  },
-  searchResultsContainer: {
     padding: 16,
   },
   dateGroup: {
@@ -600,6 +544,6 @@ const styles = {
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-};
+});
 
-export default MemoryScreen;
+export default MemoriesScreen;

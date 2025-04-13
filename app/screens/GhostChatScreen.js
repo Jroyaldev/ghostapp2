@@ -19,7 +19,7 @@ import {
   Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GhostIcon, ArrowLeft, Settings } from 'lucide-react-native';
+import { GhostIcon, ArrowLeft, Settings, Star, Bookmark, Copy, Share2 } from 'lucide-react-native';
 
 // Components
 import ChatBubble from '../components/chat/ChatBubble';
@@ -28,6 +28,7 @@ import MessageInput from '../components/chat/MessageInput';
 // Services and Utilities
 import { generateAIResponse, getGhostPersonas } from '../services/ai-service';
 import { saveMessage, getMessages } from '../services/chat-service';
+import { saveMemory } from '../services/memory-service';
 import { generateRandomId, formatDate } from '../utils/helpers';
 import { auth } from '../services/firebase';
 
@@ -45,6 +46,7 @@ const GhostChatScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [currentPersona, setCurrentPersona] = useState(getGhostPersonas()[0]);
+  const [savedMemoryIds, setSavedMemoryIds] = useState([]); // Track which messages are saved as memories
   const listRef = useRef(null);
   const ghostOpacity = useRef(new Animated.Value(0)).current;
   
@@ -97,6 +99,75 @@ const GhostChatScreen = ({ navigation }) => {
     } finally {
       setIsInitializing(false);
     }
+  };
+  
+  // Function to handle saving a message as a memory
+  const handleSaveMemory = async (message, customTags = []) => {
+    try {
+      // Get current user
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'You need to be signed in to save memories');
+        return;
+      }
+      
+      // Save the message as a memory
+      const { success, memoryId, tags, error } = await saveMemory(user.uid, message, customTags);
+      
+      if (success) {
+        // Add to saved memory IDs
+        setSavedMemoryIds(prev => [...prev, message.id]);
+        
+        // Show success animation and feedback
+        Alert.alert(
+          'Memory Saved', 
+          tags && tags.length > 0 ?
+            `This message has been saved to your memories with tags: ${tags.map(t => '#' + t).join(', ')}` :
+            'This message has been saved to your memories.'
+        );
+      } else {
+        Alert.alert('Error', error || 'Failed to save memory');
+      }
+    } catch (error) {
+      console.error('Error saving memory:', error);
+      Alert.alert('Error', 'An unexpected error occurred while saving the memory.');
+    }
+  };
+  
+  // Function to handle message option selection on long press
+  const handleMessageOptions = (message) => {
+    // Don't show save memory option if already saved
+    const alreadySaved = savedMemoryIds.includes(message.id);
+    
+    Alert.alert(
+      'Message Options',
+      'What would you like to do with this message?',
+      [
+        ...(!alreadySaved ? [{
+          text: 'Save to Memories',
+          onPress: () => handleSaveMemory(message),
+          // Apply Apple-like precision with clear hierarchical importance
+          style: 'default'
+        }] : [{
+          text: 'Already Saved to Memories',
+          // Disable the option if already saved
+          style: 'default',
+          // Apply Discord-like styling with subtle visual feedback
+          disabled: true
+        }]),
+        {
+          text: 'Copy Text',
+          onPress: () => {
+            // Copy text to clipboard would be implemented here
+            Alert.alert('Copied', 'Message copied to clipboard');
+          }
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
   };
   
   // Function to handle sending a new message
@@ -167,6 +238,9 @@ const GhostChatScreen = ({ navigation }) => {
     const showDateHeader = index === 0 || 
       formatDate(item.timestamp) !== formatDate(messages[index - 1].timestamp);
     
+    // Check if this message is saved as a memory
+    const isSavedMemory = savedMemoryIds.includes(item.id);
+    
     return (
       <>
         {showDateHeader && (
@@ -176,10 +250,8 @@ const GhostChatScreen = ({ navigation }) => {
         )}
         <ChatBubble 
           message={item} 
-          onLongPress={(message) => {
-            // TODO: Show options - save to memories, copy, etc.
-            console.log('Long press on message:', message.id);
-          }} 
+          isSavedMemory={isSavedMemory}
+          onLongPress={() => handleMessageOptions(item)}
         />
       </>
     );
@@ -211,11 +283,10 @@ const GhostChatScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.settingsButton}
             onPress={() => {
-              // TODO: Show settings modal for chat
-              console.log('Settings button pressed');
+              navigation.navigate('Memories');
             }}
           >
-            <Settings size={20} color="#FFFFFF" strokeWidth={1.5} />
+            <Bookmark size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
         </View>
         
