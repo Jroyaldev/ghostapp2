@@ -34,15 +34,137 @@ const MemoryScreen = ({ navigation }) => {
   
   // Load memories when screen mounts or becomes focused
   useEffect(() => {
-    loadMemories();
+    // Check if in demo mode and load demo data
+    const isDemoMode = true; // For mockup, later can be controlled by settings
+    
+    if (isDemoMode) {
+      loadDemoMemories();
+    } else {
+      loadMemories();
+    }
     
     // Set up a focus listener to reload memories when screen is focused
     const unsubscribe = navigation.addListener('focus', () => {
-      loadMemories();
+      if (isDemoMode) {
+        loadDemoMemories();
+      } else {
+        loadMemories();
+      }
     });
     
     return unsubscribe;
   }, [navigation]);
+  
+  const loadDemoMemories = () => {
+    // Create demo memories that showcase AI capabilities and group chat use cases
+    setTimeout(() => {
+      const demoMemories = [
+        // Design project group chat memories
+        {
+          id: 'memory-1',
+          text: "Ghost helped us analyze our UI color palette and suggested adjustments to improve accessibility. WCAG compliance score jumped from 68% to 93% using these colors instead.",
+          timestamp: new Date(2025, 3, 14, 10, 45).getTime(),
+          isUser: true,
+          tags: ['design', 'accessibility', 'project_jupiter']
+        },
+        {
+          id: 'memory-2',
+          text: "The new user onboarding flow should include these 3 key steps: 1) Welcome/value proposition, 2) Optional account creation with clear benefits, 3) Core feature spotlight with interactive examples",
+          timestamp: new Date(2025, 3, 14, 10, 42).getTime(),
+          isUser: false,
+          tags: ['design', 'onboarding', 'ux']
+        },
+        {
+          id: 'memory-3',
+          text: "Research findings suggest our target demographic (25-34) prefers minimalist interfaces with intuitive gestures over traditional navigation patterns.",
+          timestamp: new Date(2025, 3, 14, 9, 30).getTime(),
+          isUser: true,
+          tags: ['research', 'ux', 'demographics']
+        },
+        
+        // Development team memories
+        {
+          id: 'memory-4',
+          text: "Found a performance bottleneck in the image processing pipeline. Ghost suggested optimizing with WebAssembly which reduced processing time by 78% in our tests.",
+          timestamp: new Date(2025, 3, 13, 16, 20).getTime(),
+          isUser: true,
+          tags: ['development', 'performance', 'wasm']
+        },
+        {
+          id: 'memory-5',
+          text: "The state management issue appears to be caused by multiple components modifying the same slice of state. Recommend implementing an event-based architecture with proper data flow.",
+          timestamp: new Date(2025, 3, 13, 14, 15).getTime(),
+          isUser: false,
+          tags: ['development', 'architecture', 'debugging']
+        },
+        {
+          id: 'memory-6',
+          text: "Code review strategy for Team Orion: Automated linting and test coverage checks first, then 2-person reviews for architectural changes, 1-person for standard features.",
+          timestamp: new Date(2025, 3, 13, 11, 10).getTime(),
+          isUser: false,
+          tags: ['development', 'team_process']
+        },
+        
+        // Product strategy memories
+        {
+          id: 'memory-7',
+          text: "Competitor analysis shows our unique value prop is the real-time collaboration + AI assistance combo. None of the top 5 competitors integrate both effectively.",
+          timestamp: new Date(2025, 3, 12, 13, 25).getTime(),
+          isUser: true,
+          tags: ['strategy', 'competitive_analysis']
+        },
+        {
+          id: 'memory-8',
+          text: "Based on current usage patterns, these 3 features should be prioritized for Q2: 1) Enhanced thread organization, 2) AI summary generation, 3) Integration with project management tools",
+          timestamp: new Date(2025, 3, 12, 10, 5).getTime(),
+          isUser: false,
+          tags: ['strategy', 'roadmap', 'features']
+        },
+        
+        // Team collaboration memories
+        {
+          id: 'memory-9',
+          text: "Meeting notes from design sprint: Focus on solving the multi-workspace navigation problem. Users with 5+ spaces report confusion when switching contexts.",
+          timestamp: new Date(2025, 3, 11, 15, 30).getTime(),
+          isUser: true,
+          tags: ['meeting', 'design_sprint', 'navigation']
+        },
+        {
+          id: 'memory-10',
+          text: "Survey data shows 89% of power users prefer keyboard shortcuts for common actions. Ghost generated a comprehensive shortcut system that doesn't conflict with browser defaults.",
+          timestamp: new Date(2025, 3, 11, 14, 0).getTime(),
+          isUser: true,
+          tags: ['research', 'accessibility', 'power_users']
+        },
+        {
+          id: 'memory-11',
+          text: "For the cross-functional team structure to work effectively, recommend organizing spaces by project rather than department. This improved team velocity by 34% in similar case studies.",
+          timestamp: new Date(2025, 3, 11, 11, 45).getTime(), 
+          isUser: false,
+          tags: ['team_organization', 'productivity']
+        },
+        
+        // Research findings
+        {
+          id: 'memory-12',
+          text: "User testing session revealed confusion around the notification settings. Need to simplify options and provide clearer explanations of each notification type.",
+          timestamp: new Date(2025, 3, 10, 16, 15).getTime(),
+          isUser: true,
+          tags: ['research', 'usability', 'notifications']
+        },
+        {
+          id: 'memory-13',
+          text: "Market analysis suggests expanding the AI capabilities to include data visualization would address an unmet need for 68% of our enterprise customers.",
+          timestamp: new Date(2025, 3, 10, 13, 20).getTime(),
+          isUser: false,
+          tags: ['research', 'market_analysis', 'enterprise']
+        }
+      ];
+      
+      setMemories(demoMemories);
+      setLoading(false);
+    }, 800); // Simulate loading
+  };
   
   const loadMemories = async () => {
     try {
@@ -84,6 +206,25 @@ const MemoryScreen = ({ navigation }) => {
       setIsSearching(true);
       setIsSearchMode(true);
       
+      // In demo mode, do client-side filtering to simulate search
+      const isDemoMode = true;
+      
+      if (isDemoMode) {
+        setTimeout(() => {
+          const results = memories.filter(memory => {
+            const lowerQuery = query.toLowerCase();
+            const matchesText = memory.text.toLowerCase().includes(lowerQuery);
+            const matchesTags = memory.tags && memory.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
+            return matchesText || matchesTags;
+          });
+          
+          setSearchResults(results);
+          setIsSearching(false);
+        }, 1000);
+        return;
+      }
+      
+      // Normal search via API
       const user = auth.currentUser;
       if (!user) return;
       
@@ -218,40 +359,43 @@ const MemoryScreen = ({ navigation }) => {
   );
   
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#121214" />
       
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.headerTitle}>Memory Chips</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Memory</Text>
         
         {!isSearchMode ? (
           <TouchableOpacity 
-            style={styles.searchButton}
+            style={styles.headerButton}
             onPress={() => setIsSearchMode(true)}
+            activeOpacity={0.7}
           >
             <Search size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
-            style={styles.searchButton}
+            style={styles.headerButton}
             onPress={() => {
               setIsSearchMode(false);
               setSearchQuery('');
             }}
+            activeOpacity={0.7}
           >
             <XCircle size={20} color="#FFFFFF" strokeWidth={1.5} />
           </TouchableOpacity>
         )}
       </View>
       
-      {/* Search Input */}
+      {/* Search Input - Only visible in search mode */}
       {isSearchMode && (
         <View style={styles.searchInputContainer}>
           <View style={styles.searchInput}>
             <Search size={16} color="rgba(255, 255, 255, 0.5)" strokeWidth={1.5} />
             <TouchableOpacity 
               style={styles.searchInputField}
+              activeOpacity={0.7}
               onPress={() => {
                 Alert.prompt(
                   'Search Memories',
@@ -281,49 +425,15 @@ const MemoryScreen = ({ navigation }) => {
         </View>
       )}
       
-      {/* Tags horizontal scroll */}
-      {!isSearchMode && getAllTags().length > 0 && (
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tagsScrollContainer}
-        >
-          {selectedTag && (
-            <TouchableOpacity 
-              style={styles.clearTagButton}
-              onPress={() => setSelectedTag(null)}
-            >
-              <XCircle size={14} color="#3ECFB2" strokeWidth={2} />
-              <Text style={styles.clearTagText}>Clear</Text>
-            </TouchableOpacity>
-          )}
-          
-          {getAllTags().map(tag => (
-            <TouchableOpacity 
-              key={tag} 
-              style={[styles.tagChip, selectedTag === tag && styles.selectedTagChip]}
-              onPress={() => setSelectedTag(tag === selectedTag ? null : tag)}
-            >
-              <Tag size={12} color={selectedTag === tag ? '#121214' : '#3ECFB2'} strokeWidth={2} />
-              <Text 
-                style={[styles.tagChipText, selectedTag === tag && styles.selectedTagChipText]}
-              >
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-      
-      {/* Loading indicator */}
+      {/* Main Content Area */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3ECFB2" />
+          <ActivityIndicator size="small" color="#3ECFB2" />
           <Text style={styles.loadingText}>Loading memories...</Text>
         </View>
       ) : isSearching ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3ECFB2" />
+          <ActivityIndicator size="small" color="#3ECFB2" />
           <Text style={styles.loadingText}>Searching...</Text>
         </View>
       ) : isSearchMode ? (
@@ -332,62 +442,99 @@ const MemoryScreen = ({ navigation }) => {
           <FlatList
             data={searchResults}
             renderItem={renderMemoryChip}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.searchResultsContainer}
+            keyExtractor={item => item.id}
+            contentContainerStyle={[
+              styles.searchResultsContainer,
+              { paddingBottom: insets.bottom + 20 }
+            ]}
+            showsVerticalScrollIndicator={false}
           />
+        ) : searchQuery ? (
+          <View style={styles.emptyContainer}>
+            <Bookmark size={40} color="rgba(255, 255, 255, 0.2)" strokeWidth={1.5} />
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptySubtitle}>Try a different search term or create a new memory</Text>
+          </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
-            <Text style={styles.emptyTitle}>No matching memories</Text>
-            <Text style={styles.emptySubtitle}>Try a different search term</Text>
+            <Search size={40} color="rgba(255, 255, 255, 0.2)" strokeWidth={1.5} />
+            <Text style={styles.emptyTitle}>Search for memories</Text>
+            <Text style={styles.emptySubtitle}>Enter a search term to find related memories</Text>
           </View>
         )
-      ) : memories.length === 0 ? (
-        // No memories state
-        <View style={styles.emptyContainer}>
-          <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
-          <Text style={styles.emptyTitle}>No memories yet</Text>
-          <Text style={styles.emptySubtitle}>Long-press on messages in chats to save them as memories</Text>
-        </View>
-      ) : filteredMemories.length === 0 ? (
-        // No matching memories for selected tag
-        <View style={styles.emptyContainer}>
-          <Bookmark size={48} color="rgba(255, 255, 255, 0.2)" strokeWidth={1} />
-          <Text style={styles.emptyTitle}>No matching memories</Text>
-          <Text style={styles.emptySubtitle}>Try selecting a different tag</Text>
-        </View>
       ) : (
-        // Memories timeline
-        <FlatList
-          data={groupedMemoriesArray}
-          keyExtractor={(item) => item.date}
-          contentContainerStyle={styles.timelineContainer}
-          renderItem={({ item: group }) => (
-            <View style={styles.dateGroup}>
-              <View style={styles.dateHeader}>
-                <Calendar size={16} color="#FFFFFF" strokeWidth={2} />
-                <Text style={styles.dateHeaderText}>{group.date}</Text>
-              </View>
+        <View style={styles.timelineView}>
+          {/* Memory Type Filter Tabs */}
+          <View style={styles.memoryTypeTabs}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.memoryTypeTabsContent}
+            >
+              <TouchableOpacity
+                style={[styles.memoryTypeTab, selectedTag === null && styles.activeMemoryTypeTab]}
+                onPress={() => setSelectedTag(null)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.memoryTypeTabText, selectedTag === null && styles.activeMemoryTypeTabText]}>All</Text>
+              </TouchableOpacity>
               
-              {/* Horizontal scroll of memory chips */}
-              <FlatList
-                horizontal
-                data={group.memories}
-                keyExtractor={(item) => item.id}
-                renderItem={renderMemoryChip}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.memoryChipsContainer}
-                snapToInterval={width * 0.75 + 16}
-                decelerationRate="fast"
-                ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
-              />
+              {getAllTags().map(tag => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.memoryTypeTab, selectedTag === tag && styles.activeMemoryTypeTab]}
+                  onPress={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.memoryTypeTabText, selectedTag === tag && styles.activeMemoryTypeTabText]}>
+                    {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          
+          {/* Memory Timeline */}
+          {filteredMemories.length > 0 ? (
+            <FlatList
+              data={groupedMemoriesArray}
+              keyExtractor={item => item.date}
+              contentContainerStyle={[
+                styles.timelineContainer,
+                { paddingBottom: insets.bottom + 20 }
+              ]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={styles.dateGroup}>
+                  <View style={styles.dateHeader}>
+                    <Calendar size={16} color="#FFFFFF" strokeWidth={1.5} />
+                    <Text style={styles.dateHeaderText}>{item.date}</Text>
+                  </View>
+                  
+                  <FlatList
+                    data={item.memories}
+                    renderItem={renderMemoryChip}
+                    keyExtractor={memory => memory.id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.memoryChipsContainer}
+                    snapToInterval={width * 0.75 + 16}
+                    decelerationRate="fast"
+                    snapToAlignment="start"
+                  />
+                </View>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Bookmark size={40} color="rgba(255, 255, 255, 0.2)" strokeWidth={1.5} />
+              <Text style={styles.emptyTitle}>No memories yet</Text>
+              <Text style={styles.emptySubtitle}>Your memories will appear here</Text>
             </View>
           )}
-        />
+        </View>
       )}
-      
-      <SafeAreaView style={{ backgroundColor: '#121214' }} />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -397,24 +544,23 @@ const styles = {
     backgroundColor: '#121214',
   },
   header: {
-    backgroundColor: '#1A1A1E',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  headerButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -422,7 +568,7 @@ const styles = {
   searchInputContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1A1A1E',
+    backgroundColor: 'rgba(26, 26, 30, 0.8)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
@@ -444,47 +590,35 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
   },
-  tagsScrollContainer: {
+  // New Memory Type Tabs
+  timelineView: {
+    flex: 1,
+  },
+  memoryTypeTabs: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  memoryTypeTabsContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(62, 207, 178, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  memoryTypeTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginRight: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(62, 207, 178, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  selectedTagChip: {
+  activeMemoryTypeTab: {
     backgroundColor: '#3ECFB2',
   },
-  tagChipText: {
-    fontSize: 12,
+  memoryTypeTabText: {
+    fontSize: 14,
     fontWeight: '500',
-    color: '#3ECFB2',
-    marginLeft: 4,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  selectedTagChipText: {
+  activeMemoryTypeTabText: {
     color: '#121214',
-  },
-  clearTagButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 12,
-  },
-  clearTagText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#3ECFB2',
-    marginLeft: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -501,12 +635,14 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    paddingBottom: 40,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 12,
+    marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
@@ -542,6 +678,7 @@ const styles = {
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
+    marginRight: 12,
     marginBottom: 2,
     // Subtle shadow for depth
     shadowColor: '#000',
@@ -589,7 +726,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(62, 207, 178, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -598,7 +735,8 @@ const styles = {
   },
   tagText: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+    color: 'rgba(62, 207, 178, 0.9)',
   },
 };
 

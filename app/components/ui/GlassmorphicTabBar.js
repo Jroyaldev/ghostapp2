@@ -31,9 +31,14 @@ const GlassmorphicTabBar = ({ state, descriptors, navigation }) => {
   // Calculate bottom padding based on safe area
   const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : 16;
   
+  // Define the inner radius and calculate outer radius to match screen curvature
+  const innerRadius = 20; // The radius of active content elements
+  const horizontalPadding = 16; // Side padding from screen edge
+  const outerRadius = Platform.OS === 'ios' ? 42 : 38; // Match iPhone/Android screen corner radius
+  
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
-      <View style={styles.tabBarContainer}>
+      <View style={[styles.tabBarContainer, { borderRadius: outerRadius }]}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label = options.tabBarLabel || options.title || route.name;
@@ -58,7 +63,10 @@ const GlassmorphicTabBar = ({ state, descriptors, navigation }) => {
               onPress={onPress}
               style={styles.tabButton}
             >
-              <View style={[styles.tabContent, isFocused && styles.activeTabContent]}>
+              <View style={[
+                styles.tabContent, 
+                isFocused && [styles.activeTabContent, { borderRadius: innerRadius }]
+              ]}>
                 <View style={styles.iconContainer}>
                   <TabIcon routeName={route.name} isFocused={isFocused} />
                 </View>
@@ -87,8 +95,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 8,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(32, 32, 36, 0.85)',
+    borderRadius: 30, // Default value, will be overridden
+    backgroundColor: 'rgba(32, 32, 36, 0.95)', // Almost opaque (barely transparent)
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
     shadowColor: '#000',
@@ -115,7 +123,7 @@ const styles = StyleSheet.create({
   },
   activeTabContent: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
+    borderRadius: 20, // Default value, will be overridden
     padding: 10,
     alignItems: 'center',
   },

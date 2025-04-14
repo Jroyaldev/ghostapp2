@@ -35,6 +35,7 @@ import { auth } from '../services/firebase';
 // Components
 import VibeRing from '../components/spaces/VibeRing';
 
+// Main SpacesScreen Component
 const SpacesScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [spaces, setSpaces] = useState([]);
@@ -146,9 +147,10 @@ const SpacesScreen = ({ navigation }) => {
     navigation.navigate('SpaceChat', { spaceId: space.id });
   };
   
+  // Create Space Modal
   const renderCreateModal = () => (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={createModalVisible}
       onRequestClose={() => setCreateModalVisible(false)}
@@ -157,63 +159,61 @@ const SpacesScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Create New Space</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Create Space</Text>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter space name"
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                value={newSpaceName}
+                onChangeText={setNewSpaceName}
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.textInput, styles.textareaInput]}
+                placeholder="What's this space about?"
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                value={newSpaceDescription}
+                onChangeText={setNewSpaceDescription}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setCreateModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
               
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Space Name</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter space name"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  value={newSpaceName}
-                  onChangeText={setNewSpaceName}
-                />
-              </View>
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Description (Optional)</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textareaInput]}
-                  placeholder="What's this space about?"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  value={newSpaceDescription}
-                  onChangeText={setNewSpaceDescription}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-              
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setCreateModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.actionButton]}
-                  onPress={handleCreateSpace}
-                >
-                  <Text style={styles.actionButtonText}>Create</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.actionButton]}
+                onPress={handleCreateSpace}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.actionButtonText}>Create</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
   
+  // Join Space Modal
   const renderJoinModal = () => (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={joinModalVisible}
       onRequestClose={() => setJoinModalVisible(false)}
@@ -222,69 +222,56 @@ const SpacesScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Join Space</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Join Space</Text>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Invitation Code</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter invitation code"
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                value={spaceIdToJoin}
+                onChangeText={setSpaceIdToJoin}
+              />
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setJoinModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
               
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Invitation Code</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter invitation code"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  value={spaceIdToJoin}
-                  onChangeText={setSpaceIdToJoin}
-                />
-              </View>
-              
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setJoinModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.actionButton]}
-                  onPress={handleJoinSpace}
-                >
-                  <Text style={styles.actionButtonText}>Join</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.actionButton]}
+                onPress={handleJoinSpace}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.actionButtonText}>Join</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
   
-  const renderSpace = (space) => {
-    // Default to NEUTRAL vibe if not specified
-    const spaceVibe = space.currentVibe || VIBE_TYPES.NEUTRAL;
-    
+  // Render a single space item
+  const renderSpaceItem = (space) => {
     return (
       <TouchableOpacity 
         key={space.id} 
         style={styles.spaceCard}
         onPress={() => handleOpenSpace(space)}
+        activeOpacity={0.7}
       >
         <View style={styles.spaceIconContainer}>
-          <VibeRing 
-            vibe={spaceVibe} 
-            size={60} 
-            strength={spaceVibe.strength || 0.5}
-          />
-          <View style={styles.spaceIcon}>
-            {space.imageUrl ? (
-              <Image source={{ uri: space.imageUrl }} style={styles.spaceImage} />
-            ) : (
-              <MessageCircle size={20} color="#FFFFFF" />
-            )}
+          <View style={styles.spaceIconBg}>
+            <MessageCircle size={20} color="#FFFFFF" strokeWidth={1.5} />
           </View>
         </View>
         
@@ -293,12 +280,8 @@ const SpacesScreen = ({ navigation }) => {
           
           <View style={styles.spaceStats}>
             <View style={styles.statItem}>
-              <Users size={14} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.statText}>{space.memberCount || 0}</Text>
-            </View>
-            
-            <View style={styles.vibeChip}>
-              <Text style={styles.vibeText}>{spaceVibe.emoji} {spaceVibe.id}</Text>
+              <Users size={12} color="rgba(255, 255, 255, 0.6)" strokeWidth={1.5} />
+              <Text style={styles.statText}>{space.memberCount || 1}</Text>
             </View>
           </View>
           
@@ -313,73 +296,78 @@ const SpacesScreen = ({ navigation }) => {
   };
   
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#121214" />
       
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.headerTitle}>Spaces</Text>
+      <View style={styles.header}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Spaces</Text>
+        </View>
         
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity style={styles.headerButton} activeOpacity={0.7}>
           <Search size={20} color="#FFFFFF" strokeWidth={1.5} />
         </TouchableOpacity>
       </View>
       
-      {/* Create/Join Space Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={[styles.actionCard, styles.createButton]}
-          onPress={() => setCreateModalVisible(true)}
-        >
-          <View style={styles.actionIcon}>
-            <Plus size={24} color="#3ECFB2" strokeWidth={2} />
-          </View>
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Create a Space</Text>
-            <Text style={styles.actionSubtitle}>Start a new conversation</Text>
-          </View>
-        </TouchableOpacity>
+      {/* Main Content */}
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + 20 } // Add padding to avoid content being under nav bar
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Create/Join Space Actions */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { marginRight: 8 }]}
+            onPress={() => setCreateModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconContainer, { backgroundColor: 'rgba(62, 207, 178, 0.15)' }]}>
+              <Plus size={20} color="#3ECFB2" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.actionText}>Create Space</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => setJoinModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconContainer, { backgroundColor: 'rgba(157, 122, 255, 0.15)' }]}>
+              <LogIn size={20} color="#9D7AFF" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.actionText}>Join Space</Text>
+          </TouchableOpacity>
+        </View>
         
-        <TouchableOpacity 
-          style={[styles.actionCard, styles.joinButton]}
-          onPress={() => setJoinModalVisible(true)}
-        >
-          <View style={styles.actionIcon}>
-            <LogIn size={24} color="#9D7AFF" strokeWidth={2} />
+        {/* Spaces List */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#3ECFB2" />
+            <Text style={styles.loadingText}>Loading spaces...</Text>
           </View>
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Join a Space</Text>
-            <Text style={styles.actionSubtitle}>Enter a code or ID</Text>
+        ) : spaces.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <MessageCircle size={40} color="rgba(255, 255, 255, 0.2)" strokeWidth={1.5} />
+            <Text style={styles.emptyTitle}>No spaces yet</Text>
+            <Text style={styles.emptySubtitle}>Create or join a space to start connecting</Text>
           </View>
-        </TouchableOpacity>
-      </View>
+        ) : (
+          <View style={styles.spacesContainer}>
+            <Text style={styles.spacesTitle}>Your Spaces</Text>
+            {spaces.map(renderSpaceItem)}
+          </View>
+        )}
+      </ScrollView>
       
-      {/* Spaces List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3ECFB2" />
-          <Text style={styles.loadingText}>Loading spaces...</Text>
-        </View>
-      ) : spaces.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyVibe}>
-            <VibeRing vibe={VIBE_TYPES.FRIENDLY} size={100} pulseEnabled={false} />
-          </View>
-          <Text style={styles.emptyTitle}>No spaces yet</Text>
-          <Text style={styles.emptySubtitle}>Create a space to start a conversation with friends or colleagues</Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.spacesList} contentContainerStyle={styles.spacesListContent}>
-          <Text style={styles.sectionTitle}>Your Spaces</Text>
-          {spaces.map(renderSpace)}
-        </ScrollView>
-      )}
-      
+      {/* Modals */}
       {renderCreateModal()}
       {renderJoinModal()}
-      
-      <SafeAreaView style={{ backgroundColor: '#121214' }} />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -392,143 +380,113 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1A1A1E',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionButtons: {
-    flexDirection: 'row',
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
     padding: 16,
-    backgroundColor: '#1A1A1E',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    marginBottom: 24,
   },
   actionCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
-    borderWidth: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: 12,
   },
-  createButton: {
-    borderColor: 'rgba(62, 207, 178, 0.3)',
-  },
-  joinButton: {
-    borderColor: 'rgba(157, 122, 255, 0.3)',
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  actionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    marginRight: 12,
+    marginRight: 8,
   },
-  actionContent: {
-    flex: 1,
-  },
-  actionTitle: {
+  actionText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  actionSubtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
+    fontWeight: '500',
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 24,
     alignItems: 'center',
   },
   loadingText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 8,
     fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyVibe: {
-    marginBottom: 16,
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 12,
+    marginTop: 16,
+    marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 8,
     textAlign: 'center',
   },
-  spacesList: {
+  spacesContainer: {
     flex: 1,
   },
-  spacesListContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  sectionTitle: {
+  spacesTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   spaceCard: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
   spaceIconContainer: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
-  spaceIcon: {
-    position: 'absolute',
+  spaceIconBg: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(62, 207, 178, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  spaceImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
   },
   spaceInfo: {
     flex: 1,
@@ -542,31 +500,20 @@ const styles = StyleSheet.create({
   spaceStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
   },
   statText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.6)',
     marginLeft: 4,
-  },
-  vibeChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  vibeText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
   },
   spaceDescription: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(255, 255, 255, 0.5)',
     lineHeight: 18,
   },
   modalOverlay: {
@@ -582,11 +529,10 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    // Glassmorphic effect
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowRadius: 16,
     elevation: 10,
   },
   modalTitle: {

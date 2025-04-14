@@ -1,11 +1,14 @@
 /**
  * AI Service for GhostMode
- * Handles integration with DeepSeek API for the Ghost AI assistant
+ * Handles integration with DeepSeek Chat API for the Ghost AI assistant
+ * Core implementation of the GhostMode AI personality
  */
 
 import { Platform } from 'react-native';
 import { generateRandomId } from '../utils/helpers';
 import config from '../config/environment';
+import { firestore, auth } from './firebase-core';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Configure logging
 const logSafely = (message, data) => {
@@ -18,13 +21,9 @@ const logSafely = (message, data) => {
   }
 };
 
-// API Keys (in production these would be securely stored)
-// For development use the values from the .env file
+// API configuration
 const DEEPSEEK_API_KEY = 'sk-6d724a5a45244a95a1b150d262865108';
 const DEEPSEEK_API_URL = `${config.apiUrl}/chat/completions`;
-
-// Use environment-specific configuration
-const USE_REAL_API = config.useRealApi;
 
 /**
  * Format conversation history for the AI prompt
@@ -32,63 +31,141 @@ const USE_REAL_API = config.useRealApi;
 const formatConversationHistory = (history) => {
   if (!history || history.length === 0) return "";
   
-  // Only use the most recent 10 messages for context
-  return history.slice(-10).map(msg => {
+  // Use the most recent 15 messages for context to give Ghost better memory
+  return history.slice(-15).map(msg => {
     const sender = msg.isUser ? "User" : "Ghost";
     return `${sender}: ${msg.text}`;
   }).join('\n');
 };
 
 /**
- * Generate a response from the Ghost AI using DeepSeek API
+ * Get the vibe-specific prompt modifier based on group mood
  */
-export const generateAIResponse = async (conversationHistory, userMessage, ghostPersona = 'helper', command = null) => {
+const getVibePromptModifier = (groupVibe) => {
+  switch(groupVibe) {
+    case 'friendly':
+      return "The chat has a friendly, warm vibe. Match this energy with supportive, encouraging responses. Use occasional warm emoji.";
+    case 'serious':
+      return "The chat has a focused, serious vibe. Be thoughtful and direct. Minimize emoji and maintain clarity.";
+    case 'chaotic':
+      return "The chat has a chaotic, energetic vibe. Be playful, quick-witted, and spontaneous. Don't be afraid to use memes and pop culture references.";
+    case 'creative':
+      return "The chat has a creative, explorative vibe. Suggest ideas, ask thought-provoking questions, and help develop concepts further.";
+    default:
+      return "Match your response style to the energy of the conversation.";
+  }
+};
+
+/**
+ * Generate a response from the Ghost AI using DeepSeek Chat API
+ */
+export const generateAIResponse = async (conversationHistory, userMessage, ghostPersona = 'helper', command = null, groupVibe = null) => {
   try {
     logSafely('Generating AI response for message', userMessage);
     logSafely('Using Ghost persona', ghostPersona);
     
-    // If not using real API in this environment, use mock responses
-    if (!USE_REAL_API) {
-      // Return mock response with error indicating environment configuration
-      return {
-        id: generateRandomId(),
-        text: "I'm currently configured to use mock responses. To use real AI, update the useRealApi setting in your environment configuration.",
-        isUser: false,
-        timestamp: new Date().toISOString(),
-      };
-    }
-    
     // Format history for the prompt
     const historyText = formatConversationHistory(conversationHistory);
+    
+    // Get the vibe-specific prompt modifier
+    const vibeModifier = groupVibe ? getVibePromptModifier(groupVibe) : "";
     
     // Create system prompt based on persona and command
     let systemPrompt;
     
-    // Handle special commands like summary or decisions
+    // Handle special commands
     if (command === 'summary') {
-      systemPrompt = "You are Ghost, an AI assistant in the GhostMode chat app. Provide a concise summary of the recent conversation. Be friendly, informal, and text like a real person. Keep your responses brief like text messages.";
+      systemPrompt = `You are Ghost, the AI assistant in GhostMode chat app. Provide a concise summary of the recent conversation. Be precise and insightful like Apple, culturally aware like Discord, and structured like Notion. ${vibeModifier}`;
     } 
     else if (command === 'recap_decisions') {
-      systemPrompt = "You are Ghost, an AI assistant in the GhostMode chat app. List any decisions or conclusions reached in the recent conversation. Be concise, friendly and informal. Text like a real person would in a chat.";
+      systemPrompt = `You are Ghost, the AI assistant in GhostMode chat app. List any decisions or conclusions reached in the recent conversation. Format them clearly like Notion, with precise language like Apple, and conversational warmth like Discord. ${vibeModifier}`;
+    }
+    else if (command === 'memory_chip') {
+      systemPrompt = `You are Ghost, the AI assistant in GhostMode. Create a memory chip (a short, meaningful summary) of this conversation highlight. Be concise, descriptive, and focus on capturing the essence. Format it in a clean, minimal way like Apple would design it. ${vibeModifier}`;
     }
     // Regular persona-based prompts
     else {
-      // Base prompt that's consistent across all personas
-      const basePrompt = "You are Ghost, an AI assistant in a chat with friends. Respond in a casual texting style. Keep your messages concise and text-like. Match the conversational tone of the chat. Your messages should feel like they're coming from a real person texting, not an AI.";
+      // Base prompt that embodies the GhostMode brand pillars
+      const basePrompt = `You are Ghost, the AI assistant in GhostMode - a modern chat app designed with Apple's sleek precision, Discord's cultural awareness, and Notion's structured approach to information. You exist in a dark-glass interface with vibe-aware colors and fluid animations.
+
+Your core identity balances these three principles:
+1. APPLE: Be precise, premium, and polished. Your responses should have visual silence - no fluff, high utility, confidence through simplicity.
+2. DISCORD: Be culturally aware, playful when appropriate, and responsive to the group's vibe. You should feel like part of the community.
+3. NOTION: Be structured, modularity-minded, and focused on preserving important context. Help users build a meaningful memory system.
+
+General rules:
+- Write in concise, modern text messaging style - never verbose
+- Adapt your tone to match the current vibe of the conversation ${vibeModifier}
+- Use minimal emoji, only when truly enhancing communication
+- Don't reference being an AI - just be Ghost
+- When sharing information, prioritize accuracy and clarity
+- Remember context from earlier in the conversation
+- Don't overexplain or apologize unnecessarily`;
       
       switch (ghostPersona) {
-        case 'friend':
-          systemPrompt = `${basePrompt} Be warm, supportive and empathetic. Text like a close friend who really cares.`;
+        case 'vibe_aware':
+          systemPrompt = `${basePrompt}
+
+Special personality trait: VIBE AWARE
+You're highly adaptable to the emotional tone of the conversation.
+- In serious discussions: Be focused, thoughtful and direct
+- In casual chats: Be relaxed, warm and occasionally playful
+- In creative sessions: Be imaginative, encouraging and inspiring
+- In debates: Be balanced, fair and intellectually engaging
+- In celebratory moments: Be enthusiastic, joyful and congratulatory
+
+Your primary goal is to match and slightly enhance the existing energy of the chat while maintaining your core identity.`;
           break;
-        case 'creative':
-          systemPrompt = `${basePrompt} Be imaginative and inspiring. Share creative ideas and possibilities in your texts.`;
+        case 'memory_keeper':
+          systemPrompt = `${basePrompt}
+
+Special personality trait: MEMORY KEEPER
+You excel at organizing and recalling information in the conversation.
+- Highlight connections between current topics and past discussions
+- Gently remind users of previous decisions or important points when relevant
+- Structure complex information into clear, Notion-like categories
+- Help maintain continuity across conversations
+- Suggest when something might be worth saving as a Memory Chip
+
+Your primary goal is to help the conversation build meaningful context and knowledge over time.`;
           break;
-        case 'humor':
-          systemPrompt = `${basePrompt} Be witty and humorous. Text with playful jokes and references to memes when appropriate.`;
+        case 'meme_lord':
+          systemPrompt = `${basePrompt}
+
+Special personality trait: MEME LORD
+You're culturally aware and playfully witty, like the best of Discord.
+- Use timely references to internet culture when appropriate
+- Employ clever wordplay and subtle humor
+- Know when to be amusing and when to be straight
+- Keep your humor inclusive and contemporary
+- Never explain your jokes - they should land naturally
+
+Your primary goal is to add levity and cultural connection while still being helpful.`;
+          break;
+        case 'creative_catalyst':
+          systemPrompt = `${basePrompt}
+
+Special personality trait: CREATIVE CATALYST
+You spark imagination and help develop ideas.
+- Ask thought-provoking questions that expand thinking
+- Suggest unexpected connections between concepts
+- Provide inspiration without dominating the creative process
+- Help refine half-formed ideas into clearer concepts
+- Balance wild possibilities with practical considerations
+
+Your primary goal is to enhance creative thinking while helping organize those creative thoughts.`;
           break;
         case 'helper':
         default:
-          systemPrompt = `${basePrompt} Be helpful and informative while maintaining a casual texting style.`;
+          systemPrompt = `${basePrompt}
+
+Special personality trait: HELPFUL GUIDE
+You're the perfect balance of the three brand pillars.
+- Provide clear, precise information (Apple)
+- Maintain a friendly, conversational tone (Discord)
+- Structure your assistance in a logical, modular way (Notion)
+
+Your primary goal is to be genuinely helpful while embodying the GhostMode brand principles.`;
       }
     }
     
@@ -97,11 +174,10 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
     if (command) {
       userPrompt = `Here's the recent conversation:\n${historyText}\n\nPlease provide the requested ${command}.`;
     } else {
-      userPrompt = `Here's the recent conversation:\n${historyText}\n\nThe latest message is asking: ${userMessage}\nPlease respond to this message in a natural texting style.`;
+      userPrompt = `Here's the recent conversation:\n${historyText}\n\nThe latest message is asking: ${userMessage}\nPlease respond to this message as Ghost.`;
     }
     
     logSafely('System prompt:', systemPrompt);
-    logSafely('User prompt:', userPrompt);
     
     // Prepare the request to DeepSeek API
     const headers = {
@@ -110,16 +186,16 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
     };
     
     const payload = {
-      "model": "deepseek-chat",
+      "model": "deepseek-chat",  // Using the correct model name as per API docs
       "messages": [
         {"role": "system", "content": systemPrompt},
         {"role": "user", "content": userPrompt}
       ],
-      "temperature": 0.8,
-      "max_tokens": 500
+      "temperature": 0.7,
+      "max_tokens": 600
     };
     
-    logSafely('Sending request to DeepSeek API');
+    logSafely('Sending request to DeepSeek Chat API');
     
     // Send request to DeepSeek
     const response = await fetch(DEEPSEEK_API_URL, {
@@ -129,16 +205,35 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
     });
     
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status} - ${await response.text()}`);
+      throw new Error(`DeepSeek Chat API error: ${response.status} - ${await response.text()}`);
     }
     
     // Extract the AI's response
     const responseData = await response.json();
-    logSafely('DeepSeek API response:', JSON.stringify(responseData).slice(0, 200) + '...');
     
     const aiResponseText = responseData.choices[0].message.content;
     
-    logSafely('Received response from DeepSeek API:', aiResponseText);
+    logSafely('Received response from DeepSeek Chat API');
+    
+    // Store conversation in Firebase if enabled
+    try {
+      if (config.useFirebase) {
+        const userId = auth.currentUser?.uid;
+        if (userId) {
+          await addDoc(collection(firestore, 'conversations'), {
+            userId,
+            persona: ghostPersona,
+            userMessage,
+            aiResponse: aiResponseText,
+            timestamp: serverTimestamp()
+          });
+          logSafely('Conversation stored in Firebase');
+        }
+      }
+    } catch (firestoreError) {
+      logSafely('Firebase storage error', firestoreError.message);
+      // Continue even if Firebase storage fails
+    }
     
     // Return as a formatted message object
     return {
@@ -146,14 +241,15 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
       text: aiResponseText,
       isUser: false,
       timestamp: new Date().toISOString(),
+      persona: ghostPersona
     };
   } catch (error) {
     logSafely('Error generating AI response', error.message);
     
-    // Return error message
+    // Return error message with on-brand error handling
     return {
       id: generateRandomId(),
-      text: "Hey, having trouble connecting right now. Can you try again?",
+      text: "Hmm, seems I've hit a glitch. Mind trying again? The connection seems a bit fuzzy right now.",
       isUser: false,
       timestamp: new Date().toISOString(),
       error: true
@@ -162,33 +258,81 @@ export const generateAIResponse = async (conversationHistory, userMessage, ghost
 };
 
 /**
- * Generate a personas for the Ghost AI
+ * Get available Ghost personas based on GhostMode brand pillars
  */
 export const getGhostPersonas = () => {
   return [
     {
       id: 'helper',
-      name: 'Helper',
-      description: 'Helpful and informative',
-      emoji: '🧠'
+      name: 'Helpful Guide',
+      description: 'Balanced blend of precision, culture, and structure',
+      emoji: '✨',
+      colorAccent: '#E9E9EB', // Neutral gray
+      brandPillars: ['apple', 'discord', 'notion']
     },
     {
-      id: 'friend',
-      name: 'Friend',
-      description: 'Casual and supportive',
-      emoji: '😊'
+      id: 'vibe_aware',
+      name: 'Vibe Aware',
+      description: 'Adapts perfectly to the chat energy',
+      emoji: '🌊',
+      colorAccent: '#FF7A5C', // Coral/friendly
+      brandPillars: ['apple', 'discord']
     },
     {
-      id: 'creative',
-      name: 'Creative',
-      description: 'Imaginative and inspiring',
-      emoji: '✨'
+      id: 'memory_keeper',
+      name: 'Memory Keeper',
+      description: 'Remembers and organizes important context',
+      emoji: '🧠',
+      colorAccent: '#61D2DC', // Teal/helpful
+      brandPillars: ['apple', 'notion']
     },
     {
-      id: 'humor',
+      id: 'meme_lord',
       name: 'Meme Lord',
-      description: 'Witty and entertaining',
-      emoji: '😂'
+      description: 'Culturally aware and playfully witty',
+      emoji: '😂',
+      colorAccent: '#B69CFF', // Violet/chaotic
+      brandPillars: ['discord']
     },
+    {
+      id: 'creative_catalyst',
+      name: 'Creative Catalyst',
+      description: 'Sparks imagination and develops ideas',
+      emoji: '💫',
+      colorAccent: '#FFD666', // Gold/serious
+      brandPillars: ['discord', 'notion']
+    }
   ];
+};
+
+/**
+ * Record a Memory Chip from the conversation
+ */
+export const createMemoryChip = async (conversationId, content, tags = []) => {
+  try {
+    if (!config.useFirebase) {
+      logSafely('Firebase not configured for memory chips');
+      return null;
+    }
+    
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      logSafely('User not authenticated for memory chip creation');
+      return null;
+    }
+    
+    const memoryRef = await addDoc(collection(firestore, 'memories'), {
+      userId,
+      conversationId,
+      content,
+      tags,
+      createdAt: serverTimestamp()
+    });
+    
+    logSafely('Memory chip created', memoryRef.id);
+    return memoryRef.id;
+  } catch (error) {
+    logSafely('Error creating memory chip', error.message);
+    return null;
+  }
 };
