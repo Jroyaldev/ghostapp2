@@ -3,9 +3,17 @@
  * Handles storing and retrieving memories with semantic embeddings
  */
 
-import { firestore } from './firebase';
+import { 
+  firestore, 
+  FieldValue, 
+  addDocument, 
+  getDocument,
+  queryCollection,
+  updateDocument
+} from './firebase';
 import { generateRandomId } from '../utils/helpers';
 import { generateEmbedding, semanticSimilarity } from './embeddings-service';
+import { orderBy, limit as limitQuery } from 'firebase/firestore';
 import config from '../config/environment';
 
 // Configure logging
@@ -61,18 +69,20 @@ export const saveMemory = async (userId, message, customTags = []) => {
       timestamp: message.timestamp,
       embedding,
       tags,
-      createdAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
     };
     
     // Get the collection path from environment config
     const collectionPath = config.firestorePaths.userMemories(userId);
     
     // Add to user's memories collection
-    const docRef = await firestore
-      .collection(collectionPath)
-      .add(memoryToSave);
+    const { id: memoryId, error } = await addDocument(collectionPath, memoryToSave);
     
-    return { success: true, memoryId: docRef.id, tags };
+    if (error) {
+      return { success: false, error };
+    }
+    
+    return { success: true, memoryId, tags };
   } catch (error) {
     logSafely('Error saving memory', error.message);
     return { success: false, error: error.message };
@@ -90,22 +100,21 @@ export const getMemories = async (userId, limit = 100) => {
     const collectionPath = config.firestorePaths.userMemories(userId);
     
     // Get memories from user's memories collection, sorted by timestamp
-    const memoriesSnapshot = await firestore
-      .collection(collectionPath)
-      .orderBy('timestamp', 'desc')
-      .limit(limit)
-      .get();
+    const { results: memoriesData, error } = await queryCollection(
+      collectionPath,
+      [orderBy('timestamp', 'desc')],
+      limit
+    );
     
-    const memories = [];
-    memoriesSnapshot.forEach((doc) => {
-      const memory = {
-        ...doc.data(),
-        id: doc.id,
-      };
-      // Remove the embedding from the response to reduce payload size
-      delete memory.embedding;
-      
-      memories.push(memory);
+    if (error) {
+      return { memories: [], error };
+    }
+    
+    // Process memories to remove embeddings and ensure proper formatting
+    const memories = memoriesData.map(memory => {
+      // Create a new object without the embedding to reduce payload size
+      const { embedding, ...memoryWithoutEmbedding } = memory;
+      return memoryWithoutEmbedding;
     });
     
     // Return in reverse chronological order (newest first)
@@ -130,25 +139,23 @@ export const findRelatedMemories = async (userId, text, threshold = 0.7, limit =
     const collectionPath = config.firestorePaths.userMemories(userId);
     
     // Get all memories to compare embeddings
-    const memoriesSnapshot = await firestore
-      .collection(collectionPath)
-      .get();
+    const { results: memoriesData, error } = await queryCollection(collectionPath);
+    
+    if (error) {
+      return { memories: [], error };
+    }
     
     const results = [];
-    memoriesSnapshot.forEach((doc) => {
-      const memory = doc.data();
+    memoriesData.forEach(memory => {
       if (memory.embedding) {
         const similarity = semanticSimilarity(queryEmbedding, memory.embedding);
         if (similarity > threshold) {
           // Create a result object without the embedding to reduce size
-          const resultMemory = { 
-            id: doc.id,
-            ...memory,
+          const { embedding, ...memoryWithoutEmbedding } = memory;
+          results.push({
+            ...memoryWithoutEmbedding,
             similarity
-          };
-          delete resultMemory.embedding;
-          
-          results.push(resultMemory);
+          });
         }
       }
     });
@@ -175,11 +182,15 @@ export const deleteMemory = async (userId, memoryId) => {
     // Get the collection path from environment config
     const collectionPath = config.firestorePaths.userMemories(userId);
     
-    // Delete the memory document
-    await firestore
-      .collection(collectionPath)
-      .doc(memoryId)
-      .delete();
+    const { success, error } = await updateDocument(
+      collectionPath,
+      memoryId,
+      { deleted: true, deletedAt: new Date().toISOString() }
+    );
+    
+    if (error) {
+      return { success: false, error };
+    }
     
     return { success: true };
   } catch (error) {

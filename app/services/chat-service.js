@@ -3,7 +3,14 @@
  * Handles storing and retrieving chat messages from Firebase
  */
 
-import { firestore } from './firebase';
+import { 
+  firestore, 
+  FieldValue, 
+  addDocument, 
+  queryCollection,
+  updateDocument 
+} from './firebase';
+import { orderBy, limit as limitQuery } from 'firebase/firestore';
 import { generateRandomId } from '../utils/helpers';
 import config from '../config/environment';
 
@@ -29,18 +36,20 @@ export const saveMessage = async (userId, message) => {
     const messageToSave = {
       ...message,
       userId, // Store the user ID for ownership
-      createdAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
     };
     
     // Get the collection path from environment config
     const collectionPath = config.firestorePaths.userChats(userId);
     
     // Add to user's ghost chat collection
-    await firestore
-      .collection(collectionPath)
-      .add(messageToSave);
+    const { id, error } = await addDocument(collectionPath, messageToSave);
     
-    return { success: true };
+    if (error) {
+      return { success: false, error };
+    }
+    
+    return { success: true, messageId: id };
   } catch (error) {
     logSafely('Error saving message', error.message);
     return { success: false, error: error.message };
@@ -58,23 +67,18 @@ export const getMessages = async (userId, limit = 100) => {
     const collectionPath = config.firestorePaths.userChats(userId);
     
     // Get messages from user's ghost chat collection, sorted by timestamp
-    const messagesSnapshot = await firestore
-      .collection(collectionPath)
-      .orderBy('timestamp', 'desc')
-      .limit(limit)
-      .get();
+    const { results: messagesData, error } = await queryCollection(
+      collectionPath,
+      [orderBy('timestamp', 'desc')],
+      limit
+    );
     
-    const messages = [];
-    messagesSnapshot.forEach((doc) => {
-      const message = {
-        ...doc.data(),
-        id: doc.id,
-      };
-      messages.push(message);
-    });
+    if (error) {
+      return { messages: [], error };
+    }
     
     // Return in chronological order (oldest first)
-    return { messages: messages.reverse(), error: null };
+    return { messages: messagesData.reverse(), error: null };
   } catch (error) {
     logSafely('Error getting messages', error.message);
     return { messages: [], error: error.message };
@@ -97,12 +101,10 @@ export const saveBatchMessages = async (userId, messages) => {
       const messageToSave = {
         ...message,
         userId,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: new Date().toISOString(),
       };
       
-      return firestore
-        .collection(collectionPath)
-        .add(messageToSave);
+      return addDocument(collectionPath, messageToSave);
     });
     
     await Promise.all(promises);
@@ -125,17 +127,18 @@ export const clearMessages = async (userId) => {
     const collectionPath = config.firestorePaths.userChats(userId);
     
     // Get all messages
-    const messagesSnapshot = await firestore
-      .collection(collectionPath)
-      .get();
+    const { results: messagesData, error } = await queryCollection(collectionPath);
     
-    // Delete each message
-    const promises = [];
-    messagesSnapshot.forEach((doc) => {
-      promises.push(firestore
-        .collection(collectionPath)
-        .doc(doc.id)
-        .delete());
+    if (error) {
+      return { success: false, error };
+    }
+    
+    // Mark each message as deleted instead of actually deleting
+    const promises = messagesData.map(message => {
+      return updateDocument(collectionPath, message.id, {
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      });
     });
     
     await Promise.all(promises);
