@@ -38,24 +38,12 @@ const ChatBubble = ({ message, onLongPress, isSavedMemory = false }) => {
           {message.text}
         </Text>
         
-        {/* Footer with time */}
-        <View style={styles.footer}>
-          <Text 
-            style={[
-              styles.time,
-              isUser ? styles.userTime : styles.ghostTime
-            ]}
-          >
-            {formatTimeAgo(message.timestamp)}
-          </Text>
-          
-          {/* Memory indicator */}
-          {isSavedMemory && (
-            <View style={styles.memoryIndicator}>
-              <Bookmark size={12} color="#3ECFB2" strokeWidth={2} />
-            </View>
-          )}
-        </View>
+        {/* Memory indicator only - removed timestamp */}
+        {isSavedMemory && (
+          <View style={styles.memoryIndicator}>
+            <Bookmark size={12} color="#3ECFB2" strokeWidth={2} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -63,28 +51,41 @@ const ChatBubble = ({ message, onLongPress, isSavedMemory = false }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 8,
-    maxWidth: '90%',
+    marginVertical: 4, // Consistent vertical spacing between bubbles
+    maxWidth: '85%', // Slightly thinner bubbles
     alignSelf: 'flex-start',
   },
   userContainer: {
     alignSelf: 'flex-end',
+    marginLeft: 'auto', // Ensure proper alignment for user messages
   },
   ghostContainer: {
     alignSelf: 'flex-start',
+    marginRight: 'auto', // Ensure proper alignment for ghost messages
   },
   bubble: {
     padding: 12,
-    borderRadius: 18,
+    paddingVertical: 10, // Better vertical padding
+    borderRadius: 22, // Match iOS style (22px)
     borderWidth: 1,
+    // Add subtle shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   userBubble: {
     backgroundColor: 'rgba(62, 207, 178, 0.12)',
     borderColor: 'rgba(62, 207, 178, 0.2)',
+    // iOS style bubble tail for user messages
+    borderBottomRightRadius: 4,
   },
   ghostBubble: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderColor: 'rgba(255, 255, 255, 0.08)',
+    // iOS style bubble tail for ghost messages
+    borderBottomLeftRadius: 4,
   },
   // Special styling for saved memories - subtle glow effect
   savedMemoryBubble: {
@@ -98,6 +99,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     lineHeight: 22,
+    letterSpacing: 0.1, // Improved readability
   },
   userText: {
     color: '#FFFFFF',
@@ -105,24 +107,9 @@ const styles = StyleSheet.create({
   ghostText: {
     color: '#FFFFFF',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  time: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-  userTime: {
-    color: '#FFFFFF',
-  },
-  ghostTime: {
-    color: '#FFFFFF',
-  },
   memoryIndicator: {
-    marginLeft: 5,
+    alignSelf: 'flex-end',
+    marginTop: 6,
   }
 });
 

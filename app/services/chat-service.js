@@ -149,3 +149,31 @@ export const clearMessages = async (userId) => {
     return { success: false, error: error.message };
   }
 };
+
+// Save prompt bar state (auto-scroll or paused) to Firestore
+export const savePromptBarState = async (userId, state) => {
+  try {
+    const collectionPath = config.firestorePaths.userChats(userId);
+    // Save state as a special doc
+    await updateDocument(collectionPath, 'promptBarState', {
+      ...state,
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Get prompt bar state from Firestore
+export const getPromptBarState = async (userId) => {
+  try {
+    const collectionPath = config.firestorePaths.userChats(userId);
+    const { results, error } = await queryCollection(collectionPath);
+    if (error) return {};
+    const stateDoc = results.find(doc => doc.id === 'promptBarState');
+    return stateDoc || {};
+  } catch {
+    return {};
+  }
+};
