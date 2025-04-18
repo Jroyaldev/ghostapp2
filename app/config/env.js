@@ -7,7 +7,8 @@
 // 3. Replace the placeholder below with your actual key
 // 4. Restart the app after making changes
 
-export const OPENROUTER_API_KEY = "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"; // Replace with your actual key
+// NOTE: Make sure this API key is valid and has proper permissions
+export const OPENROUTER_API_KEY = "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"; // 
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 // Default to Mistral-8B model (fast & efficient for quick suggestions)

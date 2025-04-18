@@ -75,7 +75,7 @@ Respond ONLY with a JSON array of suggestions (no explanation, no extra text). E
     
     // Return empty suggestions if API call fails
     if (!response.ok) {
-      console.error('OpenRouter API error');
+      console.error('OpenRouter API error', await response.text());
       return [];
     }
     
@@ -161,7 +161,8 @@ Respond ONLY with a JSON array of suggestions (no explanation, no extra text). E
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://ghostmode.app'
         },
         body: JSON.stringify({
           model: OPENROUTER_DEFAULT_MODEL,
